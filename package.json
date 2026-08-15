@@ -6,12 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node src/utils/scoring.test.mjs && node src/utils/huntConfig.test.mjs && node src/utils/gameData/gameData.test.mjs",
+    "simulate": "node scripts/simulateArcade.mjs",
+    "fetch-images": "node scripts/fetchGameImages.mjs",
+    "playtest": "vite build --config vite.playtest.config.js && vite preview --outDir dist-playtest --port 4173 & sleep 4 && node scripts/playtest.mjs && node scripts/huntPlaytest.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "^10.5.4",
+    "playwright-core": "^1.62.1",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.0"
