@@ -23,6 +23,41 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == playerId;
     }
+
+    // ---------------------------------------------------------------------
+    // Mystery Hunt v2: 9 independent levels, one winner each, then a mega
+    // level 10 that opens once all 9 are claimed.
+    // ---------------------------------------------------------------------
+
+    // Public board data: the hint is meant to be read by everyone.
+    // Deliberately does NOT contain the secret code or the form link.
+    match /huntLevels/{levelId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // The secret code IS the document id, and listing is forbidden - so this
+    // doc is only reachable by someone who already knows the code. That is
+    // what keeps the form link secret until a level is actually cracked.
+    match /huntLevelCodes/{code} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if isAdmin();
+    }
+
+    // One claim doc per level, id = the level number. `create` fails if the
+    // doc already exists, which makes "first correct code wins" atomic without
+    // a transaction. The rule re-checks the code server-side, so a player
+    // cannot claim a level by writing straight to Firestore from devtools.
+    match /huntClaims/{levelId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.level == int(levelId)
+        && exists(/databases/$(database)/documents/huntLevelCodes/$(request.resource.data.code))
+        && get(/databases/$(database)/documents/huntLevelCodes/$(request.resource.data.code)).data.level == int(levelId);
+      allow update, delete: if isAdmin();
+    }
     
     match /config/secrets {
       allow read: if true;
