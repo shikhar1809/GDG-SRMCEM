@@ -4,6 +4,8 @@ import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { Shield, RefreshCw, LogOut, Users, Settings, Brain, Search, Globe, Power, AlertTriangle, Flame, Ghost, Eye, Trophy, Lightbulb, Unlock } from 'lucide-react';
 import { ALL_LEVELS, MEGA_LEVEL, NORMAL_LEVELS, normalizeCode, claimedNormalCount } from '../utils/huntConfig';
+import { withoutAdmins, rankScores } from '../utils/leaderboard';
+import { badgeById } from '../utils/badges';
 
 const SUPER_ADMINS = ['royalshikher@gmail.com', 'i.e.ishantiwari@gmail.com'];
 
@@ -27,7 +29,7 @@ export default function AdminGames() {
   const [newEmail, setNewEmail] = useState('');
   
   // Arcade Leaderboard State
-  const [arcadeScores, setArcadeScores] = useState([]);
+  const [allArcadeScores, setAllArcadeScores] = useState([]);
   
   // Prompt Wars State
   const [pwRoundName, setPwRoundName] = useState('');
@@ -82,7 +84,7 @@ export default function AdminGames() {
     const arcadeUnsub = onSnapshot(collection(db, 'arcadeScores'), (snap) => {
       const scores = [];
       snap.forEach(d => scores.push({ id: d.id, ...d.data() }));
-      setArcadeScores(scores.sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0)));
+      setAllArcadeScores(scores);
     });
 
     // Fetch Prompt Wars Submissions
@@ -296,9 +298,7 @@ export default function AdminGames() {
     if (!window.confirm("Are you sure you want to clear all Tech-O-Fire scores? This cannot be undone.")) return;
     try {
       const snap = await getDocs(collection(db, 'techQuizScores'));
-      snap.forEach(async (d) => {
-        await deleteDoc(doc(db, 'techQuizScores', d.id));
-      });
+      await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, 'techQuizScores', d.id))));
       alert("Tech-O-Fire scores cleared!");
     } catch (e) {
       console.error(e);
@@ -306,14 +306,29 @@ export default function AdminGames() {
     }
   };
 
+  // Clears the leaderboard AND every player's attempts, so a fresh batch of
+  // students starts from zero with their full 2 goes at each game. Wiping the
+  // scores alone would leave everyone locked out, since attempts live on the
+  // gameRequests docs.
   const handleResetArcadeLeaderboard = async () => {
-    if (!window.confirm("DANGER: Are you sure you want to clear the ENTIRE Global Arcade Leaderboard? This will delete all arcade scores and cannot be undone.")) return;
+    if (
+      !window.confirm(
+        'DANGER: clear the ENTIRE Arcade Leaderboard AND reset every player\'s attempts?\n\n' +
+          'All scores are deleted and everyone gets their 2 attempts back on every game. This cannot be undone.'
+      )
+    )
+      return;
     try {
-      const snap = await getDocs(collection(db, 'arcadeScores'));
-      snap.forEach(async (d) => {
-        await deleteDoc(doc(db, 'arcadeScores', d.id));
-      });
-      alert("Global Arcade Leaderboard cleared!");
+      const [scores, requests] = await Promise.all([
+        getDocs(collection(db, 'arcadeScores')),
+        getDocs(collection(db, 'gameRequests')),
+      ]);
+      // await every delete, so the alert cannot fire before the work is done
+      await Promise.all([
+        ...scores.docs.map((d) => deleteDoc(doc(db, 'arcadeScores', d.id))),
+        ...requests.docs.map((d) => deleteDoc(doc(db, 'gameRequests', d.id))),
+      ]);
+      alert(`Cleared ${scores.size} score(s) and reset ${requests.size} play session(s).`);
     } catch (e) {
       console.error(e);
       alert("Failed to clear leaderboard.");
@@ -322,6 +337,8 @@ export default function AdminGames() {
 
   if (loading || !configLoaded) return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><div className="w-16 h-16 border-4 border-[#4285F4] border-t-transparent rounded-full animate-spin"></div></div>;
 
+  // Same filter as the player-facing board, so the two can never disagree.
+  const arcadeScores = rankScores(withoutAdmins(allArcadeScores, adminEmails));
   const isSuperAdmin = user?.email && SUPER_ADMINS.includes(user.email.toLowerCase());
   const isPlaymaker = user?.email && adminEmails.includes(user.email.toLowerCase());
   const hasAccess = isSuperAdmin || isPlaymaker;

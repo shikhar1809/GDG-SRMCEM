@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Trophy, CheckCircle2, XCircle, RotateCcw, Play } from 'lucide-react';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { TECH_RECALL_WORDS } from '../utils/gameData/techRecallData';
 import { arcadePoints, drawGradedSet, isCloseEnough, PASS_MARKS } from '../utils/scoring';
+import { useGameSession } from '../utils/useGameSession';
+import StallGate from '../components/StallGate';
 
 const GAME_ID = 'tech-recall';
 const PASS_MARK_PCT = Math.round(PASS_MARKS['tech-recall'] * 100);
@@ -26,10 +28,7 @@ export default function TechRecall() {
   const [words, setWords] = useState([]);
   const [currentRound, setCurrentRound] = useState(0);
   const [score, setScore] = useState(0);
-  const [adminEmails, setAdminEmails] = useState([]);
-  const [requestStatus, setRequestStatus] = useState('none');
-  const [lobbyCode, setLobbyCode] = useState(null);
-  const [requestId, setRequestId] = useState('');
+  const session = useGameSession(GAME_ID);
 
   const [timeLeft, setTimeLeft] = useState(PLAY_DURATION);
   const [inputValue, setInputValue] = useState('');
@@ -43,17 +42,8 @@ export default function TechRecall() {
   const timeBankRef = useRef(0); // seconds left, summed over solved rounds only
   const roundLockRef = useRef(false); // one resolution per round, whatever fires first
 
-  const isAdmin = auth.currentUser && adminEmails.includes(auth.currentUser.email?.toLowerCase());
+  const isAdmin = session.isAdmin;
   const currentWord = words[currentRound];
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
-      if (snap.exists() && snap.data().adminEmails) {
-        setAdminEmails(snap.data().adminEmails.map((e) => e.toLowerCase()));
-      }
-    });
-    return () => unsub();
-  }, []);
 
   const startGame = useCallback(() => {
     setWords(drawGradedSet(TECH_RECALL_WORDS, DIFFICULTY_PROFILE).map((w) => w.word));
@@ -68,31 +58,10 @@ export default function TechRecall() {
     setGameState('flashing');
   }, []);
 
-  // Admin approval at the stall starts the game automatically.
+  // Approval auto-launches the FIRST attempt only.
   useEffect(() => {
-    if (!auth.currentUser) return;
-    const reqId = `${auth.currentUser.uid}_${GAME_ID}`;
-    setRequestId(reqId);
-
-    const unsub = onSnapshot(doc(db, 'gameRequests', reqId), (snap) => {
-      if (!snap.exists()) {
-        setRequestStatus('none');
-        setLobbyCode(null);
-        return;
-      }
-      setRequestStatus(snap.data().status);
-      setLobbyCode(snap.data().lobbyCode || null);
-      if (snap.data().status === 'approved') {
-        setGameState((s) => {
-          if (s !== 'intro') return s;
-          // Defer so we never call setState on another component's render.
-          setTimeout(startGame, 0);
-          return s;
-        });
-      }
-    });
-    return () => unsub();
-  }, [startGame]);
+    if (session.autoStart) startGame();
+  }, [session.autoStart, startGame]);
 
   // Flash the word, then hand over to typing.
   useEffect(() => {
@@ -188,20 +157,18 @@ export default function TechRecall() {
           score: solved,
           totalRounds: words.length,
           points,
-          lobbyCode: lobbyCode || null,
+          lobbyCode: session.lobbyCode || null,
           timestamp: serverTimestamp(),
         });
         await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
-        if (requestId) {
-          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
-        }
+        await session.consumeAttempt();
       } catch (error) {
         console.error('Error saving Tech Recall score:', error);
       } finally {
         setSavingScore(false);
       }
     })();
-  }, [gameState, score, words.length, requestId, lobbyCode]);
+  }, [gameState, score, words.length, session]);
 
   const replay = () => {
     savedRef.current = false;
@@ -277,67 +244,7 @@ export default function TechRecall() {
                   Start Game
                 </button>
               ) : (
-                <div className="bg-gray-50/80 border border-gray-200 p-8 rounded-3xl max-w-lg mx-auto shadow-2xl">
-                  <div className="bg-blue-500/20 text-[#4285F4] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Trophy size={32} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Visit Our Stall to Play!</h3>
-                  <p className="text-gray-500 text-base leading-relaxed mb-6">
-                    To play this game and win exciting GDG swags, please visit our physical stall and
-                    request access.
-                  </p>
-
-                  {requestStatus === 'none' && (
-                    <button
-                      onClick={async () => {
-                        if (!auth.currentUser) return;
-                        await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
-                          userId: auth.currentUser.uid,
-                          userName: auth.currentUser.displayName || 'Player',
-                          userEmail: auth.currentUser.email,
-                          gameId: GAME_ID,
-                          status: 'pending',
-                          lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                          timestamp: serverTimestamp(),
-                        });
-                      }}
-                      className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#4285F4] hover:bg-blue-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg"
-                    >
-                      Request to Play
-                    </button>
-                  )}
-
-                  {requestStatus === 'pending' && (
-                    <div className="flex flex-col gap-3">
-                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-center gap-3">
-                        <div className="w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
-                        <span className="font-bold">Waiting for Admin Approval...</span>
-                      </div>
-                      <div className="text-center font-mono text-xl font-bold bg-gray-50 py-2 rounded-lg border border-gray-200">
-                        Lobby Code: <span className="text-[#4285F4]">{lobbyCode || '...'}</span>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          if (!requestId) return;
-                          try {
-                            await deleteDoc(doc(db, 'gameRequests', requestId));
-                          } catch (e) {
-                            console.error('Failed to cancel request', e);
-                          }
-                        }}
-                        className="w-full inline-flex justify-center items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors"
-                      >
-                        Cancel Request
-                      </button>
-                    </div>
-                  )}
-
-                  {requestStatus === 'completed' && (
-                    <div className="bg-gray-100 text-gray-500 p-4 rounded-xl">
-                      <span className="font-bold">You have already played this game.</span>
-                    </div>
-                  )}
-                </div>
+                <StallGate session={session} accent="#4285F4" onStart={startGame} />
               )}
             </motion.div>
           )}
@@ -500,12 +407,13 @@ export default function TechRecall() {
               )}
 
               <div className="flex flex-col gap-4">
-                {isAdmin && (
+                {(isAdmin || session.attemptsLeft > 0) && (
                   <button
                     onClick={replay}
                     className="flex items-center justify-center w-full py-4 bg-[#4285F4] hover:bg-blue-600 text-white font-bold rounded-xl transition-colors text-lg"
                   >
-                    <RotateCcw className="w-5 h-5 mr-2" /> Play Again
+                    <RotateCcw className="w-5 h-5 mr-2" />
+                    {isAdmin ? 'Play Again' : `Attempt ${session.attemptsUsed + 1} of 2`}
                   </button>
                 )}
                 <button

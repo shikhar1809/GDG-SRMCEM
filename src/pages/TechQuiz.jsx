@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Clock, Award, RotateCcw, Zap } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { TECH_QUIZ_QUESTIONS } from '../utils/gameData/techQuizData';
 import { arcadePoints, drawGradedSet, shuffleOptions, PASS_MARKS } from '../utils/scoring';
+import { useGameSession } from '../utils/useGameSession';
+import StallGate from '../components/StallGate';
 
 const GAME_ID = 'tech-quiz';
 const PASS_MARK_PCT = Math.round(PASS_MARKS['tech-quiz'] * 100);
@@ -25,10 +27,7 @@ export default function TechQuiz() {
   const [isAnswering, setIsAnswering] = useState(false);
   const [quizFinished, setQuizFinished] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
-  const [adminEmails, setAdminEmails] = useState([]);
-  const [requestStatus, setRequestStatus] = useState('none');
-  const [lobbyCode, setLobbyCode] = useState(null);
-  const [requestId, setRequestId] = useState('');
+  const session = useGameSession(GAME_ID);
   const [earnedPoints, setEarnedPoints] = useState(null);
 
   const timerRef = useRef(null);
@@ -40,7 +39,7 @@ export default function TechQuiz() {
   const scoreRef = useRef(0);
   const savedRef = useRef(false);
 
-  const isAdmin = auth.currentUser && adminEmails.includes(auth.currentUser.email?.toLowerCase());
+  const isAdmin = session.isAdmin;
 
   const buildQuestions = useCallback(
     () =>
@@ -54,33 +53,6 @@ export default function TechQuiz() {
   useEffect(() => {
     setQuestions(buildQuestions());
   }, [buildQuestions]);
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
-      if (snap.exists() && snap.data().adminEmails) {
-        setAdminEmails(snap.data().adminEmails.map((e) => e.toLowerCase()));
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    if (!auth.currentUser) return;
-    const reqId = `${auth.currentUser.uid}_${GAME_ID}`;
-    setRequestId(reqId);
-
-    const unsub = onSnapshot(doc(db, 'gameRequests', reqId), (snap) => {
-      if (!snap.exists()) {
-        setRequestStatus('none');
-        setLobbyCode(null);
-        return;
-      }
-      setRequestStatus(snap.data().status);
-      setLobbyCode(snap.data().lobbyCode || null);
-      if (snap.data().status === 'approved') setIsStarted((s) => s || true);
-    });
-    return () => unsub();
-  }, []);
 
   const finishQuiz = useCallback(async () => {
     setQuizFinished(true);
@@ -111,17 +83,15 @@ export default function TechQuiz() {
         score: correct,
         total,
         points,
-        lobbyCode: lobbyCode || null,
+        lobbyCode: session.lobbyCode || null,
         timestamp: serverTimestamp(),
       });
       await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
-      if (requestId) {
-        await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
-      }
+      await session.consumeAttempt();
     } catch (error) {
       console.error('Error saving Tech Quiz score:', error);
     }
-  }, [questions.length, requestId, lobbyCode]);
+  }, [questions.length, session]);
 
   const moveToNextQuestion = useCallback(() => {
     setCurrentQuestionIndex((prev) => {
@@ -176,6 +146,12 @@ export default function TechQuiz() {
     return () => clearInterval(timerRef.current);
   }, [isStarted, quizFinished, questions.length, currentQuestionIndex, isAnswering, resolveAnswer]);
 
+  // Approval auto-launches the first attempt only; the second is started by
+  // the player from the gate card, so finishing run 1 does not relaunch under them.
+  useEffect(() => {
+    if (session.autoStart) setIsStarted(true);
+  }, [session.autoStart]);
+
   const restartQuiz = () => {
     scoreRef.current = 0;
     wrongRef.current = 0;
@@ -221,67 +197,7 @@ export default function TechQuiz() {
           </p>
 
           {!isAdmin ? (
-            <div className="bg-gray-50/80 border border-gray-200 p-8 rounded-3xl w-full text-center mx-auto shadow-2xl">
-              <div className="bg-[#fce8e6] text-[#EA4335] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Award size={32} />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Visit Our Stall to Play!</h3>
-              <p className="text-gray-500 text-base leading-relaxed mb-6">
-                To play this game and win exciting GDG swags, please visit our physical stall and
-                request access.
-              </p>
-
-              {requestStatus === 'none' && (
-                <button
-                  onClick={async () => {
-                    if (!auth.currentUser) return;
-                    await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
-                      userId: auth.currentUser.uid,
-                      userName: auth.currentUser.displayName || 'Player',
-                      userEmail: auth.currentUser.email,
-                      gameId: GAME_ID,
-                      status: 'pending',
-                      lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                      timestamp: serverTimestamp(),
-                    });
-                  }}
-                  className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#EA4335] hover:bg-red-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg"
-                >
-                  Request to Play
-                </button>
-              )}
-
-              {requestStatus === 'pending' && (
-                <div className="flex flex-col gap-3">
-                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-center gap-3">
-                    <div className="w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
-                    <span className="font-bold">Waiting for Admin Approval...</span>
-                  </div>
-                  <div className="text-center font-mono text-xl font-bold bg-gray-50 py-2 rounded-lg border border-gray-200">
-                    Lobby Code: <span className="text-[#EA4335]">{lobbyCode || '...'}</span>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      if (!requestId) return;
-                      try {
-                        await deleteDoc(doc(db, 'gameRequests', requestId));
-                      } catch (e) {
-                        console.error('Failed to cancel request', e);
-                      }
-                    }}
-                    className="w-full inline-flex justify-center items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors"
-                  >
-                    Cancel Request
-                  </button>
-                </div>
-              )}
-
-              {requestStatus === 'completed' && (
-                <div className="bg-gray-100 text-gray-500 p-4 rounded-xl">
-                  <span className="font-bold">You have already played this game.</span>
-                </div>
-              )}
-            </div>
+            <StallGate session={session} accent="#EA4335" onStart={() => setIsStarted(true)} />
           ) : (
             <button
               onClick={() => setIsStarted(true)}
@@ -465,7 +381,7 @@ export default function TechQuiz() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
-                {isAdmin && (
+                {(isAdmin || session.attemptsLeft > 0) && (
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -473,7 +389,7 @@ export default function TechQuiz() {
                     className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-800 font-bold py-4 px-6 rounded-xl transition-colors border border-gray-200"
                   >
                     <RotateCcw className="w-5 h-5" />
-                    Play Again
+                    {isAdmin ? 'Play Again' : `Attempt ${session.attemptsUsed + 1} of 2`}
                   </motion.button>
                 )}
                 <motion.button

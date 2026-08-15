@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Play, AlertTriangle, Clock, RotateCcw } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { GUESS_IMPOSTOR_QUESTIONS } from '../utils/gameData/guessImpostorData';
 import { arcadePoints, drawGradedSet, shuffleOptions, PASS_MARKS } from '../utils/scoring';
+import { useGameSession } from '../utils/useGameSession';
+import StallGate from '../components/StallGate';
 
 const GAME_ID = 'guess-impostor';
 const PASS_MARK_PCT = Math.round(PASS_MARKS['guess-impostor'] * 100);
@@ -25,11 +27,7 @@ const GuessImpostor = () => {
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
   const [earnedPoints, setEarnedPoints] = useState(null);
 
-  const [adminEmails, setAdminEmails] = useState([]);
-  const [requestStatus, setRequestStatus] = useState('none');
-  const [lobbyCode, setLobbyCode] = useState(null);
-  const [requestId, setRequestId] = useState('');
-  const [authChecked, setAuthChecked] = useState(false);
+  const session = useGameSession(GAME_ID);
 
   const timerRef = useRef(null);
   const answeredRef = useRef(false);
@@ -38,7 +36,7 @@ const GuessImpostor = () => {
   const timeBankRef = useRef(0);
   const savedRef = useRef(false);
 
-  const isAdmin = auth.currentUser && adminEmails.includes(auth.currentUser.email?.toLowerCase());
+  const isAdmin = session.isAdmin;
   const currentQ = questions[currentQuestionIndex];
 
   const buildQuestions = useCallback(
@@ -54,36 +52,6 @@ const GuessImpostor = () => {
 
   useEffect(() => {
     setQuestions(buildQuestions());
-
-    const unsubAdmin = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
-      if (snap.exists() && snap.data().adminEmails) {
-        setAdminEmails(snap.data().adminEmails.map((e) => e.toLowerCase()));
-      }
-    });
-
-    let unsubReq = () => {};
-    const unsubAuth = auth.onAuthStateChanged((user) => {
-      setAuthChecked(true);
-      unsubReq();
-      if (!user) return;
-      const reqId = `${user.uid}_${GAME_ID}`;
-      setRequestId(reqId);
-      unsubReq = onSnapshot(doc(db, 'gameRequests', reqId), (snap) => {
-        if (snap.exists()) {
-          setRequestStatus(snap.data().status);
-          setLobbyCode(snap.data().lobbyCode || null);
-        } else {
-          setRequestStatus('none');
-          setLobbyCode(null);
-        }
-      });
-    });
-
-    return () => {
-      unsubAdmin();
-      unsubReq();
-      unsubAuth();
-    };
   }, [buildQuestions]);
 
   const startGame = () => {
@@ -187,20 +155,18 @@ const GuessImpostor = () => {
           score: correct,
           total,
           points,
-          lobbyCode: lobbyCode || null,
+          lobbyCode: session.lobbyCode || null,
           timestamp: serverTimestamp(),
         });
         await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
-        if (requestId) {
-          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
-        }
+        await session.consumeAttempt();
       } catch (err) {
         console.error('Failed to save Impostor score:', err);
       }
     })();
-  }, [gameState, questions.length, requestId, lobbyCode]);
+  }, [gameState, questions.length, session]);
 
-  if (!authChecked || questions.length === 0) {
+  if (!session.loaded || questions.length === 0) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4285F4]" />
@@ -250,80 +216,7 @@ const GuessImpostor = () => {
                   Start Game
                 </button>
               ) : (
-                <div className="bg-gray-50/80 border border-gray-200 p-8 rounded-3xl max-w-lg mx-auto shadow-2xl">
-                  <div className="bg-red-500/20 text-[#EA4335] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <AlertTriangle className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Visit Our Stall to Play!</h3>
-                  <p className="text-gray-500 text-base leading-relaxed mb-6">
-                    To play this game and win exciting GDG swags, please visit our physical stall and
-                    request access.
-                  </p>
-
-                  {requestStatus === 'none' && (
-                    <button
-                      onClick={async () => {
-                        if (!auth.currentUser) return;
-                        await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
-                          userId: auth.currentUser.uid,
-                          userName: auth.currentUser.displayName || 'Player',
-                          userEmail: auth.currentUser.email,
-                          gameId: GAME_ID,
-                          status: 'pending',
-                          lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                          timestamp: serverTimestamp(),
-                        });
-                      }}
-                      className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#EA4335] hover:bg-red-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg mb-4"
-                    >
-                      Request to Play
-                    </button>
-                  )}
-
-                  {requestStatus === 'pending' && (
-                    <div className="flex flex-col gap-3 mb-4">
-                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-center gap-3">
-                        <div className="w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
-                        <span className="font-bold">Waiting for Admin Approval...</span>
-                      </div>
-                      <div className="text-center font-mono text-xl font-bold bg-gray-50 py-2 rounded-lg border border-gray-200">
-                        Lobby Code: <span className="text-[#EA4335]">{lobbyCode || '...'}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {requestStatus === 'approved' && (
-                    <button
-                      onClick={startGame}
-                      className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#34A853] hover:bg-green-600 text-white font-bold rounded-xl text-lg transition-transform hover:scale-105 active:scale-95 shadow-lg shadow-green-500/30"
-                    >
-                      <Play className="w-6 h-6 mr-3 fill-current" />
-                      Start Game
-                    </button>
-                  )}
-
-                  {requestStatus === 'completed' && (
-                    <div className="bg-gray-100 text-gray-500 p-4 rounded-xl">
-                      <span className="font-bold">You have already played this game.</span>
-                    </div>
-                  )}
-
-                  {(requestStatus === 'pending' || requestStatus === 'approved') && (
-                    <button
-                      onClick={async () => {
-                        if (!requestId) return;
-                        try {
-                          await deleteDoc(doc(db, 'gameRequests', requestId));
-                        } catch (e) {
-                          console.error('Failed to cancel request', e);
-                        }
-                      }}
-                      className="w-full mt-4 inline-flex justify-center items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors"
-                    >
-                      Cancel Request
-                    </button>
-                  )}
-                </div>
+                <StallGate session={session} accent="#EA4335" onStart={startGame} />
               )}
             </motion.div>
           )}
@@ -446,13 +339,13 @@ const GuessImpostor = () => {
               </div>
 
               <div className="flex flex-col gap-3">
-                {isAdmin && (
+                {(isAdmin || session.attemptsLeft > 0) && (
                   <button
                     onClick={startGame}
                     className="w-full inline-flex justify-center items-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 text-gray-800 font-bold rounded-xl text-lg border border-gray-200 transition-colors"
                   >
                     <RotateCcw className="w-5 h-5" />
-                    Play Again
+                    {isAdmin ? 'Play Again' : `Attempt ${session.attemptsUsed + 1} of 2`}
                   </button>
                 )}
                 <button
