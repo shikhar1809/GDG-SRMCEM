@@ -146,11 +146,6 @@ export default function TechQuiz() {
     return () => clearInterval(timerRef.current);
   }, [isStarted, quizFinished, questions.length, currentQuestionIndex, isAnswering, resolveAnswer]);
 
-  // Approval auto-launches the first attempt only; the second is started by
-  // the player from the gate card, so finishing run 1 does not relaunch under them.
-  useEffect(() => {
-    if (session.autoStart) setIsStarted(true);
-  }, [session.autoStart]);
 
   const restartQuiz = () => {
     scoreRef.current = 0;

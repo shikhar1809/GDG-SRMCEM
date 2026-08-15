@@ -53,10 +53,6 @@ const AIEye = () => {
     setImages(buildDeck());
   }, [buildDeck]);
 
-  // Approval auto-launches the FIRST attempt only.
-  useEffect(() => {
-    if (session.autoStart) setIsStarted(true);
-  }, [session.autoStart]);
 
   // Warm the next image so the round after this one starts instantly.
   useEffect(() => {

@@ -58,10 +58,6 @@ export default function TechRecall() {
     setGameState('flashing');
   }, []);
 
-  // Approval auto-launches the FIRST attempt only.
-  useEffect(() => {
-    if (session.autoStart) startGame();
-  }, [session.autoStart, startGame]);
 
   // Flash the word, then hand over to typing.
   useEffect(() => {

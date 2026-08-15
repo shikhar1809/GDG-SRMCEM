@@ -7,10 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/utils/scoring.test.mjs && node src/utils/huntConfig.test.mjs && node src/utils/gameData/gameData.test.mjs",
+    "test": "node src/utils/scoring.test.mjs && node src/utils/badges.test.mjs && node src/utils/huntConfig.test.mjs && node src/utils/gameData/gameData.test.mjs",
     "simulate": "node scripts/simulateArcade.mjs",
     "fetch-images": "node scripts/fetchGameImages.mjs",
-    "playtest": "vite build --config vite.playtest.config.js && vite preview --outDir dist-playtest --port 4173 & sleep 4 && node scripts/playtest.mjs && node scripts/huntPlaytest.mjs"
+    "playtest": "vite build --config vite.playtest.config.js && (vite preview --outDir dist-playtest --port 4173 & sleep 5) && node scripts/playtest.mjs && node scripts/huntPlaytest.mjs && node scripts/badgePlaytest.mjs && node scripts/attemptsPlaytest.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

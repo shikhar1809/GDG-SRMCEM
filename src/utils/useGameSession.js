@@ -20,8 +20,11 @@ export const MAX_ATTEMPTS = 2;
  *   attemptsUsed  runs finished so far
  *   attemptsLeft  MAX_ATTEMPTS - attemptsUsed (0 once used up)
  *   canPlay       approved (or admin) AND attempts remaining
- *   autoStart     true only for the FIRST attempt, so finishing run 1 does not
- *                 immediately relaunch the game under the player
+ *
+ * There is deliberately no auto-start. A volunteer approves while the phone is
+ * being handed back, so the player taps Start themselves and the timer never
+ * begins before they are looking at it. It also keeps attempt 1 and attempt 2
+ * behaving identically.
  */
 export function useGameSession(gameId) {
   const [adminEmails, setAdminEmails] = useState([]);
@@ -68,7 +71,6 @@ export function useGameSession(gameId) {
 
   const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsUsed);
   const canPlay = (isAdmin || status === 'approved') && (isAdmin || attemptsLeft > 0);
-  const autoStart = status === 'approved' && attemptsUsed === 0;
 
   const requestToPlay = useCallback(async () => {
     if (!user) return;
@@ -122,7 +124,6 @@ export function useGameSession(gameId) {
     attemptsUsed,
     attemptsLeft,
     canPlay,
-    autoStart,
     lobbyCode,
     requestId,
     loaded,
