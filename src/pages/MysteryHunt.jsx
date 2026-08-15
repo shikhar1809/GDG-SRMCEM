@@ -5,6 +5,7 @@ import { doc, getDoc, setDoc, collection, onSnapshot, serverTimestamp } from 'fi
 import LevelNode from '../components/LevelNode';
 import QRModal from '../components/QRModal';
 import { Trophy, ChevronLeft, ScrollText } from 'lucide-react';
+import { syncBadges } from '../utils/updateArcadeScore';
 import { useNavigate } from 'react-router-dom';
 import {
   ALL_LEVELS,
@@ -130,6 +131,11 @@ export default function MysteryHunt() {
           formUrl: codeSnap.data().formUrl || '',
           claimedAt: serverTimestamp(),
         });
+        // Cracking a level can unlock Treasure Hunter, Complete Explorer or
+        // Mega Champion, so re-check badges straight away.
+        syncBadges(user.uid, user.displayName, user.email).catch((e) =>
+          console.error('Badge sync after claim failed', e)
+        );
         return true;
       } catch (e) {
         // Rules only allow `create`, so a write that lands second is denied.

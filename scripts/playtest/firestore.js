@@ -9,6 +9,23 @@
 // Firestore rules reject them.
 const ADMIN = 'playtest@example.com';
 
+// ?asPlayer=1 drops the playtest user out of the admin list, so the harness can
+// exercise the request/approve/2-attempts flow a real student goes through.
+const asPlayer = () =>
+  typeof location !== 'undefined' && new URLSearchParams(location.search).has('asPlayer');
+const adminEmails = () => (asPlayer() ? ['someone.else@example.com'] : [ADMIN]);
+
+// Play sessions, persisted so attempts survive the page reload between runs.
+const REQ_KEY = '__playtest_game_requests__';
+const loadRequests = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(REQ_KEY) || '{}');
+  } catch {
+    return {};
+  }
+};
+const saveRequests = (o) => sessionStorage.setItem(REQ_KEY, JSON.stringify(o));
+
 export const doc = (_db, path, id) => ({ __path: id ? `${path}/${id}` : String(path) });
 export const collection = (_db, path) => ({ __path: path });
 export const serverTimestamp = () => new Date().toISOString();
@@ -30,6 +47,7 @@ for (let l = 1; l <= 8; l++) {
 }
 
 const listeners = { huntClaims: new Set(), huntLevels: new Set() };
+const requestListeners = new Set();
 const snapOf = (obj) => ({
   forEach: (fn) => Object.entries(obj).forEach(([id, data]) => fn({ id, data: () => data })),
   docs: Object.entries(obj).map(([id, data]) => ({ id, data: () => data })),
@@ -40,8 +58,18 @@ const notify = (name, obj) => listeners[name].forEach((cb) => cb(snapOf(obj)));
 export const onSnapshot = (ref, cb) => {
   const path = ref?.__path || '';
   if (path === 'huntConfig/global') {
-    cb({ exists: () => true, data: () => ({ adminEmails: [ADMIN], formUrl: '' }) });
+    cb({ exists: () => true, data: () => ({ adminEmails: adminEmails(), formUrl: '' }) });
     return () => {};
+  }
+  const req = path.match(/^gameRequests\/(.+)$/);
+  if (req) {
+    const emit = () => {
+      const d = loadRequests()[req[1]];
+      cb({ exists: () => !!d, data: () => d });
+    };
+    emit();
+    requestListeners.add(emit);
+    return () => requestListeners.delete(emit);
   }
   if (path === 'huntLevels') {
     cb(snapOf(huntLevels));
@@ -61,9 +89,14 @@ export const onSnapshot = (ref, cb) => {
 
 export const getDoc = async (ref) => {
   const path = ref?.__path || '';
-  const m = path.match(/^huntLevelCodes\/(.+)$/);
-  if (m) {
-    const data = huntCodes[m[1]];
+  const code = path.match(/^huntLevelCodes\/(.+)$/);
+  if (code) {
+    const data = huntCodes[code[1]];
+    return { exists: () => !!data, data: () => data };
+  }
+  const score = path.match(/^arcadeScores\/(.+)$/);
+  if (score) {
+    const data = loadScores()[score[1]];
     return { exists: () => !!data, data: () => data };
   }
   return { exists: () => false, data: () => null };
@@ -74,7 +107,37 @@ export const getDocs = async (ref) => {
   if (path === 'huntLevelCodes') return snapOf(huntCodes);
   if (path === 'huntLevels') return snapOf(huntLevels);
   if (path === 'huntClaims') return snapOf(huntClaims);
+  if (path === 'arcadeScores') return snapOf(loadScores());
   return { empty: true, forEach: () => {}, docs: [] };
+};
+
+// Arcade scores persist across page loads so a badge test can play several
+// games in a row and watch the badges actually accumulate.
+const SCORES_KEY = '__playtest_arcade_scores__';
+const loadScores = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(SCORES_KEY) || '{}');
+  } catch {
+    return {};
+  }
+};
+const saveScores = (obj) => sessionStorage.setItem(SCORES_KEY, JSON.stringify(obj));
+
+// Firestore increment() sentinels arrive as objects; resolve them against the
+// current value the same way the real backend would.
+const applyValue = (current, next) =>
+  next && typeof next === 'object' && '__increment' in next
+    ? (current || 0) + next.__increment
+    : next;
+
+const mergeScoreDoc = (id, data) => {
+  const all = loadScores();
+  const prev = all[id] || {};
+  const next = { ...prev };
+  for (const [k, v] of Object.entries(data)) next[k] = applyValue(prev[k], v);
+  all[id] = next;
+  saveScores(all);
+  return next;
 };
 
 const record = (kind, ref, data) => {
@@ -98,10 +161,27 @@ export const setDoc = async (ref, data) => {
     notify('huntClaims', huntClaims);
     return;
   }
+  const score = path.match(/^arcadeScores\/(.+)$/);
+  if (score) mergeScoreDoc(score[1], data);
+
+  const req = path.match(/^gameRequests\/(.+)$/);
+  if (req) {
+    const all = loadRequests();
+    const prev = all[req[1]] || {};
+    const next = { ...prev };
+    for (const [k, v] of Object.entries(data)) next[k] = applyValue(prev[k], v);
+    all[req[1]] = next;
+    saveRequests(all);
+    requestListeners.forEach((fn) => fn());
+  }
   record('set', ref, data);
 };
 
-export const updateDoc = async (ref, data) => record('update', ref, data);
+export const updateDoc = async (ref, data) => {
+  const score = (ref?.__path || '').match(/^arcadeScores\/(.+)$/);
+  if (score) mergeScoreDoc(score[1], data);
+  record('update', ref, data);
+};
 export const deleteDoc = async (ref) => {
   const m = (ref?.__path || '').match(/^huntClaims\/(\d+)$/);
   if (m) {

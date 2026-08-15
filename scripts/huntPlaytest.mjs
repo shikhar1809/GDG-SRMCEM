@@ -32,6 +32,12 @@ const run = async () => {
     p.on('pageerror', (e) => errors.push(e.message));
     p.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   });
+  await ctx.addInitScript(() => {
+    window.__BADGES__ = [];
+    window.addEventListener('badgeUnlocked', (e) =>
+      window.__BADGES__.push(...(e.detail?.badges || []).map((b) => b.id))
+    );
+  });
   const page = await ctx.newPage();
 
   await page.goto(`${BASE}/mystery-hunt`, { waitUntil: 'networkidle' });
@@ -113,6 +119,26 @@ const run = async () => {
     /Clue for level 10/i.test(megaOpen) && !/sealed/i.test(megaOpen)
   );
   await closeModal();
+
+  // --- cracking a level must award the Treasure Hunter badge ---
+  await page.waitForTimeout(1500);
+  const badges = await page.evaluate(() => window.__BADGES__ || []);
+  check('claiming a level awards Treasure Hunter', badges.includes('treasure-hunter'), badges.join(','));
+  check(
+    'Mega Champion NOT awarded for a normal level',
+    !badges.includes('mega-champion'),
+    badges.join(',')
+  );
+  const scores = await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem('__playtest_arcade_scores__') || '{}')
+  );
+  const me = scores['playtest-uid'] || {};
+  check('hunt badge adds its points to the total', me.totalScore === 40, `total=${me.totalScore}`);
+  check(
+    'arcade-only badges NOT given for a hunt win',
+    !(me.badges || []).includes('arcade-master') && !(me.badges || []).includes('triple-threat'),
+    (me.badges || []).join(',')
+  );
 
   const real = errors.filter((e) => !/favicon|net::ERR/i.test(e));
   check('no page errors', real.length === 0, real.slice(0, 2).join(' | '));

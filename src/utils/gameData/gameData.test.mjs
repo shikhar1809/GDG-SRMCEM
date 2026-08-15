@@ -50,7 +50,10 @@ const requireDepth = (name, pool, profile, factor = 3) => {
     for (const o of q.options) assert.ok(o?.trim().length > 0, `empty option: ${q.question}`);
   }
   assert.equal(new Set(pool.map((q) => q.question)).size, pool.length, 'duplicate questions');
-  requireDepth('tech-quiz', pool, { easy: 4, medium: 3, hard: 1 });
+  // Deep pool: students watch each other play, so a shallow bank means the
+  // tenth person in the queue has already seen every question.
+  assert.ok(pool.length >= 140, `quiz bank too shallow for a stall queue: ${pool.length}`);
+  requireDepth('tech-quiz', pool, { easy: 4, medium: 3, hard: 1 }, 10);
 }
 
 // --- Guess The Impostor ----------------------------------------------------
@@ -71,7 +74,8 @@ const requireDepth = (name, pool, profile, factor = 3) => {
   // is the real fix, but a flat bank means a stale build leaks every answer.
   const spread = new Set(pool.map((q) => q.impostorIndex));
   assert.ok(spread.size >= 3, `impostorIndex barely varies in the bank: ${[...spread]}`);
-  requireDepth('guess-impostor', pool, { easy: 2, medium: 3, hard: 1 });
+  assert.ok(pool.length >= 90, `impostor bank too shallow for a stall queue: ${pool.length}`);
+  requireDepth('guess-impostor', pool, { easy: 2, medium: 3, hard: 1 }, 10);
 }
 
 // --- Tech Recall -----------------------------------------------------------

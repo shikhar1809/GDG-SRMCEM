@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { doc, setDoc, serverTimestamp, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { PROMPT_CHALLENGES } from '../utils/gameData/promptWarsData';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { arcadePointsFromRatio, drawGradedSet, promptSimilarity, contentWords, PASS_MARKS } from '../utils/scoring';
 import { Send, Clock, ChevronLeft, Trophy, RotateCcw } from 'lucide-react';
+import { useGameSession } from '../utils/useGameSession';
+import StallGate from '../components/StallGate';
 import { useNavigate } from 'react-router-dom';
 
 const GAME_ID = 'prompt-wars';
@@ -27,10 +29,7 @@ const PromptWars = () => {
   const [lastResult, setLastResult] = useState(null); // { ratio, matched, missed }
   const [earnedPoints, setEarnedPoints] = useState(null);
 
-  const [adminEmails, setAdminEmails] = useState([]);
-  const [requestStatus, setRequestStatus] = useState('none');
-  const [lobbyCode, setLobbyCode] = useState(null);
-  const [requestId, setRequestId] = useState('');
+  const session = useGameSession(GAME_ID);
 
   const timerRef = useRef(null);
   const answeredRef = useRef(false);
@@ -41,7 +40,7 @@ const PromptWars = () => {
   // Lets the countdown read the latest text without restarting the interval.
   const promptGuessRef = useRef('');
 
-  const isAdmin = auth.currentUser && adminEmails.includes(auth.currentUser.email?.toLowerCase());
+  const isAdmin = session.isAdmin;
   const currentRound = rounds[roundIndex];
 
   const buildRounds = useCallback(
@@ -51,29 +50,7 @@ const PromptWars = () => {
 
   useEffect(() => {
     setRounds(buildRounds());
-    const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
-      if (snap.exists() && snap.data().adminEmails) {
-        setAdminEmails(snap.data().adminEmails.map((e) => e.toLowerCase()));
-      }
-    });
-    return () => unsub();
   }, [buildRounds]);
-
-  useEffect(() => {
-    if (!auth.currentUser) return;
-    const reqId = `${auth.currentUser.uid}_${GAME_ID}`;
-    setRequestId(reqId);
-    const unsub = onSnapshot(doc(db, 'gameRequests', reqId), (snap) => {
-      if (!snap.exists()) {
-        setRequestStatus('none');
-        setLobbyCode(null);
-        return;
-      }
-      setRequestStatus(snap.data().status);
-      setLobbyCode(snap.data().lobbyCode || null);
-    });
-    return () => unsub();
-  }, []);
 
   // Warm the next image while the player types this one.
   useEffect(() => {
@@ -188,18 +165,16 @@ const PromptWars = () => {
           prompts: rounds.map((r) => r.prompt),
           matchRatios: ratios.map((r) => Math.round(r * 100)),
           points,
-          lobbyCode: lobbyCode || null,
+          lobbyCode: session.lobbyCode || null,
           timestamp: serverTimestamp(),
         });
         await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
-        if (requestId) {
-          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
-        }
+        await session.consumeAttempt();
       } catch (err) {
         console.error('Error saving Prompt Wars score:', err);
       }
     })();
-  }, [gameState, rounds, requestId, lobbyCode]);
+  }, [gameState, rounds, session]);
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
@@ -261,7 +236,7 @@ const PromptWars = () => {
                 unrelated nouns will lower your score.
               </div>
 
-              {isAdmin || requestStatus === 'approved' ? (
+              {isAdmin ? (
                 <button
                   onClick={startGame}
                   className="inline-flex items-center px-8 py-4 bg-[#9C27B0] hover:bg-purple-700 text-white font-bold rounded-full text-xl transition-transform hover:scale-105 active:scale-95 shadow-lg"
@@ -269,70 +244,7 @@ const PromptWars = () => {
                   Start Game
                 </button>
               ) : (
-                <div className="bg-gray-50/80 border border-gray-200 p-8 rounded-3xl w-full text-center">
-                  <div className="bg-purple-100 text-[#9C27B0] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Trophy size={32} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Visit Our Stall to Play!</h3>
-                  <p className="text-gray-500 text-base leading-relaxed mb-6">
-                    To play this game and win exciting GDG swags, please visit our physical stall and
-                    request access.
-                  </p>
-
-                  {requestStatus === 'none' && (
-                    <button
-                      onClick={async () => {
-                        if (!auth.currentUser) return;
-                        await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
-                          userId: auth.currentUser.uid,
-                          userName: auth.currentUser.displayName || 'Player',
-                          userEmail: auth.currentUser.email,
-                          gameId: GAME_ID,
-                          status: 'pending',
-                          lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                          timestamp: serverTimestamp(),
-                        });
-                      }}
-                      className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#9C27B0] hover:bg-purple-700 text-white font-bold rounded-xl text-lg transition-colors shadow-lg mb-4"
-                    >
-                      Request to Play
-                    </button>
-                  )}
-
-                  {requestStatus === 'pending' && (
-                    <div className="flex flex-col gap-3 mb-4">
-                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-center gap-3">
-                        <div className="w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
-                        <span className="font-bold">Waiting for Admin Approval...</span>
-                      </div>
-                      <div className="text-center font-mono text-xl font-bold bg-gray-50 py-2 rounded-lg border border-gray-200">
-                        Lobby Code: <span className="text-[#9C27B0]">{lobbyCode || '...'}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {requestStatus === 'completed' && (
-                    <div className="bg-gray-100 text-gray-500 p-4 rounded-xl mb-4">
-                      <span className="font-bold">You have already played this game.</span>
-                    </div>
-                  )}
-
-                  {requestStatus === 'pending' && (
-                    <button
-                      onClick={async () => {
-                        if (!requestId) return;
-                        try {
-                          await deleteDoc(doc(db, 'gameRequests', requestId));
-                        } catch (e) {
-                          console.error('Failed to cancel request', e);
-                        }
-                      }}
-                      className="w-full inline-flex justify-center items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors"
-                    >
-                      Cancel Request
-                    </button>
-                  )}
-                </div>
+                <StallGate session={session} accent="#9C27B0" onStart={startGame} />
               )}
             </motion.div>
           )}
@@ -507,12 +419,13 @@ const PromptWars = () => {
               </div>
 
               <div className="flex flex-col gap-3">
-                {isAdmin && (
+                {(isAdmin || session.attemptsLeft > 0) && (
                   <button
                     onClick={startGame}
                     className="w-full inline-flex justify-center items-center gap-2 px-6 py-4 bg-white hover:bg-gray-50 text-gray-800 rounded-xl font-bold border border-gray-200 transition-colors"
                   >
-                    <RotateCcw className="w-5 h-5" /> Play Again
+                    <RotateCcw className="w-5 h-5" />
+                    {isAdmin ? 'Play Again' : `Attempt ${session.attemptsUsed + 1} of 2`}
                   </button>
                 )}
                 <button

@@ -5,6 +5,8 @@ import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
 import { ChevronLeft, LogOut, Search, Zap, Brain, Eye, Keyboard, Lock, MapPin, Ghost, Trophy, X } from 'lucide-react';
+import { withoutAdmins, rankScores } from '../utils/leaderboard';
+import { badgeById, BADGES } from '../utils/badges';
 
 
 
@@ -95,7 +97,7 @@ export default function GamesPanel() {
   const user = auth.currentUser;
   const [adminEmails, setAdminEmails] = useState([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [arcadeScores, setArcadeScores] = useState([]);
+  const [allScores, setAllScores] = useState([]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
@@ -107,15 +109,7 @@ export default function GamesPanel() {
     const arcadeUnsub = onSnapshot(collection(db, 'arcadeScores'), (snap) => {
       const scores = [];
       snap.forEach(d => scores.push({ id: d.id, ...d.data() }));
-      setArcadeScores(scores.sort((a, b) => {
-        if ((b.totalScore || 0) !== (a.totalScore || 0)) {
-          return (b.totalScore || 0) - (a.totalScore || 0); // DESC
-        }
-        // Tie-breaker: lastUpdated ASC (earliest wins)
-        const aTime = a.lastUpdated?.toMillis?.() || Date.now();
-        const bTime = b.lastUpdated?.toMillis?.() || Date.now();
-        return aTime - bTime;
-      }).slice(0, 10)); // Top 10
+      setAllScores(scores);
     });
 
     return () => {
@@ -125,6 +119,8 @@ export default function GamesPanel() {
   }, []);
 
   const isAdmin = user && adminEmails.includes(user.email?.toLowerCase());
+  // Staff run the stall, so their test scores must not sit on the board.
+  const arcadeScores = rankScores(withoutAdmins(allScores, adminEmails)).slice(0, 10);
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">
@@ -263,7 +259,20 @@ export default function GamesPanel() {
                         </div>
                         <div>
                           <div className="font-bold text-gray-800">{score.displayName || 'Anonymous'}</div>
-                          <div className="text-xs text-gray-500 truncate w-32">{score.email}</div>
+                          {score.badges?.length ? (
+                            <div className="flex gap-1 mt-0.5">
+                              {score.badges.map((id) => {
+                                const b = badgeById(id);
+                                return b ? (
+                                  <span key={id} title={`${b.name} (+${b.points})`} className="text-base leading-none">
+                                    {b.icon}
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-500 truncate w-32">{score.email}</div>
+                          )}
                         </div>
                       </div>
                       <div className="font-black text-green-500 text-xl">{score.totalScore}</div>
