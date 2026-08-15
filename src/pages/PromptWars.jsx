@@ -1,177 +1,225 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { collection, addDoc, doc, setDoc, serverTimestamp, getDocs, onSnapshot, deleteDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { doc, setDoc, serverTimestamp, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { PROMPT_CHALLENGES } from '../utils/gameData/promptWarsData';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
-import { Send, Clock, AlertCircle, ImageIcon, ChevronLeft, Trophy, CheckCircle } from 'lucide-react';
+import { arcadePointsFromRatio, drawGradedSet, promptSimilarity, contentWords, PASS_MARKS } from '../utils/scoring';
+import { Send, Clock, ChevronLeft, Trophy, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const GAME_ID = 'prompt-wars';
+const PASS_MARK_PCT = Math.round(PASS_MARKS['prompt-wars'] * 100);
+const TOTAL_ROUNDS = 3;
+const DIFFICULTY_PROFILE = { easy: 1, medium: 1, hard: 1 };
+const ROUND_TIME = 40;
+const REVEAL_MS = 4000;
 
 const PromptWars = () => {
   const navigate = useNavigate();
-  const [activeRound, setActiveRound] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [rounds, setRounds] = useState([]);
+  const [roundIndex, setRoundIndex] = useState(0);
+  const [gameState, setGameState] = useState('intro'); // intro|playing|roundResult|finalResult
   const [promptGuess, setPromptGuess] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [matchScore, setMatchScore] = useState(null);
-  const [error, setError] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(ROUND_TIME);
+  const [imageReady, setImageReady] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [lastResult, setLastResult] = useState(null); // { ratio, matched, missed }
+  const [earnedPoints, setEarnedPoints] = useState(null);
+
   const [adminEmails, setAdminEmails] = useState([]);
   const [requestStatus, setRequestStatus] = useState('none');
   const [lobbyCode, setLobbyCode] = useState(null);
   const [requestId, setRequestId] = useState('');
 
+  const timerRef = useRef(null);
+  const answeredRef = useRef(false);
+  const ratiosRef = useRef([]);
+  const timeBankRef = useRef(0);
+  const savedRef = useRef(false);
+  const guessesRef = useRef([]);
+  // Lets the countdown read the latest text without restarting the interval.
+  const promptGuessRef = useRef('');
+
   const isAdmin = auth.currentUser && adminEmails.includes(auth.currentUser.email?.toLowerCase());
+  const currentRound = rounds[roundIndex];
 
-  const calculateSimilarity = (str1, str2) => {
-    if (!str1 || !str2) return 0;
-    const normalize = (s) => s.toLowerCase().replace(/[^\w\s]/g, '').trim();
-    const words1 = normalize(str1).split(/\s+/).filter(w => w.length > 0);
-    const words2 = normalize(str2).split(/\s+/).filter(w => w.length > 0);
-    if (words1.length === 0 || words2.length === 0) return 0;
-
-    const set1 = new Set(words1);
-    const set2 = new Set(words2);
-    let intersectionCount = 0;
-    for (let w of set1) {
-      if (set2.has(w)) intersectionCount++;
-    }
-    const unionCount = set1.size + set2.size - intersectionCount;
-    return Math.round((intersectionCount / unionCount) * 100);
-  };
+  const buildRounds = useCallback(
+    () => drawGradedSet(PROMPT_CHALLENGES, DIFFICULTY_PROFILE),
+    []
+  );
 
   useEffect(() => {
-    // Select random challenge locally
-    const randomChallenge = PROMPT_CHALLENGES[Math.floor(Math.random() * PROMPT_CHALLENGES.length)];
-    setActiveRound({ ...randomChallenge, isActive: true });
-    setLoading(false);
-    
+    setRounds(buildRounds());
     const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
       if (snap.exists() && snap.data().adminEmails) {
-        setAdminEmails(snap.data().adminEmails.map(e => e.toLowerCase()));
+        setAdminEmails(snap.data().adminEmails.map((e) => e.toLowerCase()));
       }
     });
-
     return () => unsub();
-  }, [auth.currentUser]);
+  }, [buildRounds]);
 
-  // Listen to game request status
   useEffect(() => {
     if (!auth.currentUser) return;
-    const reqId = `${auth.currentUser.uid}_prompt-wars`;
+    const reqId = `${auth.currentUser.uid}_${GAME_ID}`;
     setRequestId(reqId);
-    
     const unsub = onSnapshot(doc(db, 'gameRequests', reqId), (snap) => {
-      if (snap.exists()) {
-        setRequestStatus(snap.data().status);
-        setLobbyCode(snap.data().lobbyCode);
-      } else {
+      if (!snap.exists()) {
         setRequestStatus('none');
         setLobbyCode(null);
+        return;
       }
+      setRequestStatus(snap.data().status);
+      setLobbyCode(snap.data().lobbyCode || null);
     });
     return () => unsub();
   }, []);
 
-  const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!promptGuess.trim() || isSubmitting) return;
+  // Warm the next image while the player types this one.
+  useEffect(() => {
+    const next = rounds[roundIndex + 1];
+    if (next) new Image().src = next.src;
+  }, [rounds, roundIndex]);
 
-    const user = auth.currentUser;
-    if (!user) {
-      setError('You must be logged in to submit a guess.');
-      return;
-    }
+  useEffect(() => {
+    setImageReady(false);
+    setImageFailed(false);
+    answeredRef.current = false;
+    setTimeLeft(ROUND_TIME);
+    setPromptGuess('');
+  }, [roundIndex]);
 
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const score = calculateSimilarity(promptGuess.trim(), activeRound.originalPrompt);
-      const submissionRef = doc(collection(db, 'promptWarsSubmissions'));
-      
-      await setDoc(submissionRef, {
-        playerId: user.uid,
-        displayName: user.displayName || 'Anonymous',
-        email: user.email,
-        prompt: promptGuess.trim(),
-        roundName: activeRound.roundName,
-        imageUrl: activeRound.imageUrl || '',
-        originalPrompt: activeRound.originalPrompt || '',
-        matchScore: score,
-        lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-        timestamp: serverTimestamp()
-      });
-
-      setMatchScore(score);
-      setHasSubmitted(true);
-
-      // Award Arcade Score
-      await updateArcadeScore(user.uid, user.displayName, user.email, 'prompt-wars', score);
-
-      if (requestId) {
-        try {
-          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
-        } catch(e) {}
-      }
-    } catch (err) {
-      console.error('Error submitting guess:', err);
-      setError('Failed to submit guess. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const startGame = () => {
+    ratiosRef.current = [];
+    guessesRef.current = [];
+    timeBankRef.current = 0;
+    answeredRef.current = false;
+    savedRef.current = false;
+    setRounds(buildRounds());
+    setRoundIndex(0);
+    setEarnedPoints(null);
+    setLastResult(null);
+    setPromptGuess('');
+    setGameState('playing');
   };
 
-  if (loading) {
+  const submitRound = useCallback(
+    (text, secondsLeft) => {
+      if (answeredRef.current || !currentRound) return;
+      answeredRef.current = true;
+      clearInterval(timerRef.current);
+
+      const ratio = promptSimilarity(text, currentRound.prompt);
+      ratiosRef.current.push(ratio);
+      guessesRef.current.push(text.trim());
+      if (ratio > 0) timeBankRef.current += Math.max(0, secondsLeft) * ratio;
+
+      const refWords = contentWords(currentRound.prompt);
+      const gotWords = new Set(contentWords(text));
+      setLastResult({
+        ratio,
+        matched: refWords.filter((w) => gotWords.has(w)),
+        missed: refWords.filter((w) => !gotWords.has(w)),
+      });
+      setGameState('roundResult');
+    },
+    [currentRound]
+  );
+
+  // Clock only runs once the image is actually visible.
+  useEffect(() => {
+    if (gameState !== 'playing' || !imageReady) {
+      clearInterval(timerRef.current);
+      return;
+    }
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          // Score whatever is in the box rather than throwing the round away.
+          submitRound(promptGuessRef.current, 0);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [gameState, imageReady, roundIndex, submitRound]);
+
+  useEffect(() => {
+    promptGuessRef.current = promptGuess;
+  }, [promptGuess]);
+
+  useEffect(() => {
+    if (gameState !== 'roundResult') return;
+    const t = setTimeout(() => {
+      if (roundIndex < rounds.length - 1) {
+        setRoundIndex((i) => i + 1);
+        setGameState('playing');
+      } else {
+        setGameState('finalResult');
+      }
+    }, REVEAL_MS);
+    return () => clearTimeout(t);
+  }, [gameState, roundIndex, rounds.length]);
+
+  // Save once.
+  useEffect(() => {
+    if (gameState !== 'finalResult' || savedRef.current) return;
+    savedRef.current = true;
+
+    const ratios = ratiosRef.current;
+    const avg = ratios.length ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 0;
+    const solvedTime = ratios.reduce((a, b) => a + b, 0);
+    const speed = solvedTime > 0 ? timeBankRef.current / (solvedTime * ROUND_TIME) : 0;
+    const points = arcadePointsFromRatio(avg, speed, PASS_MARKS[GAME_ID]);
+    setEarnedPoints(points);
+
+    const user = auth.currentUser;
+    if (!user) return;
+    (async () => {
+      try {
+        await setDoc(doc(db, 'promptWarsSubmissions', user.uid), {
+          playerId: user.uid,
+          displayName: user.displayName || 'Anonymous',
+          email: user.email,
+          guesses: guessesRef.current,
+          prompts: rounds.map((r) => r.prompt),
+          matchRatios: ratios.map((r) => Math.round(r * 100)),
+          points,
+          lobbyCode: lobbyCode || null,
+          timestamp: serverTimestamp(),
+        });
+        await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
+        if (requestId) {
+          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
+        }
+      } catch (err) {
+        console.error('Error saving Prompt Wars score:', err);
+      }
+    })();
+  }, [gameState, rounds, requestId, lobbyCode]);
+
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (gameState !== 'playing' || !promptGuess.trim()) return;
+    submitRound(promptGuess, timeLeft);
+  };
+
+  if (rounds.length === 0) {
     return (
       <div className="min-h-screen bg-white text-gray-900 flex flex-col items-center justify-center p-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        >
-          <Clock className="w-12 h-12 text-purple-500 mb-4" />
-        </motion.div>
-        <p className="text-xl font-medium animate-pulse text-gray-600">Loading active round...</p>
-      </div>
-    );
-  }
-
-  if (!activeRound || !activeRound.isActive) {
-    return (
-      <div className="min-h-screen bg-white text-gray-900 p-4 flex flex-col items-center justify-center relative overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] pointer-events-none" />
-        
-        <button
-          onClick={() => navigate('/arcade')}
-          className="absolute top-6 left-6 p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-600 transition-colors z-10"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center z-10"
-        >
-          <Clock className="w-20 h-20 text-gray-500 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-[#4285F4]">
-            No Active Round
-          </h2>
-          <p className="text-gray-500 text-lg max-w-md mx-auto">
-            There is no active round right now. Check back later!
-          </p>
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}>
+          <Clock className="w-12 h-12 text-[#9C27B0] mb-4" />
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-4 md:p-8 relative overflow-x-hidden">
-      {/* Background gradients removed */}
-      
-      {/* Header */}
-      <div className="relative z-10 flex items-center justify-between mb-8 max-w-4xl mx-auto">
+    <div className="min-h-screen bg-white text-gray-900 p-4 md:p-8">
+      <div className="relative z-10 flex items-center justify-between mb-6 max-w-4xl mx-auto">
         <button
           onClick={() => navigate('/arcade')}
           className="p-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full text-gray-600 transition-colors"
@@ -179,194 +227,304 @@ const PromptWars = () => {
           <ChevronLeft className="w-6 h-6" />
         </button>
         <div className="text-center">
-          <h1 className="text-2xl md:text-3xl font-black italic tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-purple-700 via-blue-700 to-purple-700 uppercase">
+          <h1 className="text-2xl md:text-3xl font-black italic tracking-wider text-[#9C27B0] uppercase">
             Prompt Wars
           </h1>
-          {(isAdmin || requestStatus === 'approved') && (
-            <p className="text-sm text-gray-600 font-medium">{activeRound.roundName}</p>
+          {(gameState === 'playing' || gameState === 'roundResult') && (
+            <p className="text-sm text-gray-600 font-medium">
+              Round {roundIndex + 1} of {rounds.length}
+            </p>
           )}
         </div>
-        <div className="w-10"></div> {/* Spacer for centering */}
+        <div className="w-10" />
       </div>
 
-      <div className="max-w-4xl mx-auto relative z-10">
-        <div className={`grid grid-cols-1 ${(!isAdmin && requestStatus !== 'approved') ? '' : 'lg:grid-cols-2'} gap-8`}>
-          
-          {/* Image Display */}
-          {(!isAdmin && requestStatus !== 'approved') ? null : (
+      <div className="max-w-4xl mx-auto">
+        <AnimatePresence mode="wait">
+          {gameState === 'intro' && (
             <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col gap-4"
-          >
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-2 shadow-xl shadow-purple-900/10 group overflow-hidden">
-              <div className="relative rounded-xl overflow-hidden aspect-square bg-white flex items-center justify-center">
-                {activeRound.imageUrl ? (
-                  <img 
-                    src={activeRound.imageUrl} 
-                    alt="AI Generated Subject" 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                ) : (
-                  <ImageIcon className="w-16 h-16 text-gray-700" />
-                )}
-                
-                {/* Decorative overlay */}
-                <div className="absolute inset-0 border border-white/10 rounded-xl pointer-events-none" />
-              </div>
-            </div>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 flex gap-3 items-start">
-              <AlertCircle className="w-5 h-5 shrink-0 text-blue-600 mt-0.5" />
-              <p>
-                Study the image above carefully. Try to guess the exact prompt used to generate it. The closest match wins!
+              key="intro"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="max-w-lg mx-auto text-center"
+            >
+              <p className="text-gray-600 text-lg mb-2">
+                You'll see {TOTAL_ROUNDS} AI-generated images. Type the prompt you think made each
+                one — <span className="font-bold text-[#9C27B0]">{ROUND_TIME} seconds</span> per
+                image.
               </p>
-            </div>
-          </motion.div>
+              <div className="bg-purple-50 border border-purple-200 text-purple-900 rounded-xl p-4 text-sm mb-8 text-left">
+                You are scored on the <strong>things you name</strong>, not on exact wording. "red
+                apple wooden table" scores the same as "a red apple on a wooden table". Small words
+                like <em>a</em> and <em>the</em> are ignored — but padding your answer with dozens of
+                unrelated nouns will lower your score.
+              </div>
+
+              {isAdmin || requestStatus === 'approved' ? (
+                <button
+                  onClick={startGame}
+                  className="inline-flex items-center px-8 py-4 bg-[#9C27B0] hover:bg-purple-700 text-white font-bold rounded-full text-xl transition-transform hover:scale-105 active:scale-95 shadow-lg"
+                >
+                  Start Game
+                </button>
+              ) : (
+                <div className="bg-gray-50/80 border border-gray-200 p-8 rounded-3xl w-full text-center">
+                  <div className="bg-purple-100 text-[#9C27B0] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Trophy size={32} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Visit Our Stall to Play!</h3>
+                  <p className="text-gray-500 text-base leading-relaxed mb-6">
+                    To play this game and win exciting GDG swags, please visit our physical stall and
+                    request access.
+                  </p>
+
+                  {requestStatus === 'none' && (
+                    <button
+                      onClick={async () => {
+                        if (!auth.currentUser) return;
+                        await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
+                          userId: auth.currentUser.uid,
+                          userName: auth.currentUser.displayName || 'Player',
+                          userEmail: auth.currentUser.email,
+                          gameId: GAME_ID,
+                          status: 'pending',
+                          lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
+                          timestamp: serverTimestamp(),
+                        });
+                      }}
+                      className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#9C27B0] hover:bg-purple-700 text-white font-bold rounded-xl text-lg transition-colors shadow-lg mb-4"
+                    >
+                      Request to Play
+                    </button>
+                  )}
+
+                  {requestStatus === 'pending' && (
+                    <div className="flex flex-col gap-3 mb-4">
+                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-center gap-3">
+                        <div className="w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="font-bold">Waiting for Admin Approval...</span>
+                      </div>
+                      <div className="text-center font-mono text-xl font-bold bg-gray-50 py-2 rounded-lg border border-gray-200">
+                        Lobby Code: <span className="text-[#9C27B0]">{lobbyCode || '...'}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {requestStatus === 'completed' && (
+                    <div className="bg-gray-100 text-gray-500 p-4 rounded-xl mb-4">
+                      <span className="font-bold">You have already played this game.</span>
+                    </div>
+                  )}
+
+                  {requestStatus === 'pending' && (
+                    <button
+                      onClick={async () => {
+                        if (!requestId) return;
+                        try {
+                          await deleteDoc(doc(db, 'gameRequests', requestId));
+                        } catch (e) {
+                          console.error('Failed to cancel request', e);
+                        }
+                      }}
+                      className="w-full inline-flex justify-center items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors"
+                    >
+                      Cancel Request
+                    </button>
+                  )}
+                </div>
+              )}
+            </motion.div>
           )}
 
-          {/* Submission Form / Success State */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col justify-center"
-          >
-            {hasSubmitted ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-gray-50 border border-green-500/30 rounded-2xl p-8 text-center shadow-lg"
-              >
-                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="w-10 h-10 text-green-400" />
-                </div>
-                <h3 className="text-2xl font-bold mb-2 text-gray-900">Submitted!</h3>
-                <p className="text-gray-500 mb-2">
-                  Your guess has been recorded. The admin will judge the closest prompt when the round ends.
-                </p>
-                {matchScore !== null && (
-                  <div className="bg-purple-50 text-purple-700 font-bold py-3 px-4 rounded-xl inline-block mb-6 border border-purple-200 shadow-sm">
-                    AI Semantic Match: {matchScore}% Accuracy
+          {(gameState === 'playing' || gameState === 'roundResult') && currentRound && (
+            <motion.div
+              key={`round-${roundIndex}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+            >
+              <div className="flex flex-col gap-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-2 shadow-lg overflow-hidden">
+                  <div className="relative rounded-xl overflow-hidden aspect-square bg-gray-200 flex items-center justify-center">
+                    {!imageReady && !imageFailed && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-500">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#9C27B0]" />
+                        <span className="text-xs font-bold uppercase tracking-wider">
+                          Loading image…
+                        </span>
+                      </div>
+                    )}
+                    {imageFailed && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                        <p className="text-sm font-bold text-gray-600">Image failed to load.</p>
+                        <button
+                          onClick={() => {
+                            setImageFailed(false);
+                            setImageReady(false);
+                          }}
+                          className="px-4 py-2 bg-[#4285F4] text-white rounded-lg font-bold text-sm"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
+                    <img
+                      key={currentRound.id}
+                      src={currentRound.src}
+                      alt="Guess the prompt that generated this"
+                      className={`w-full h-full object-cover transition-opacity duration-200 ${
+                        imageReady ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      onLoad={() => setImageReady(true)}
+                      onError={() => setImageFailed(true)}
+                      draggable={false}
+                    />
                   </div>
-                )}
-                <br />
-                <button
-                  onClick={() => navigate('/arcade')}
-                  className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-medium transition-colors w-full sm:w-auto mt-2 border border-gray-200"
-                >
-                  Back to Arcade
-                </button>
-              </motion.div>
-            ) : (!isAdmin && requestStatus !== 'approved') ? (
-              <div className="bg-gray-50/80 border border-gray-200 p-8 rounded-3xl w-full text-center">
-                <div className="bg-purple-500/20 text-[#c084fc] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Trophy size={32} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Prompt Wars</h3>
-                <p className="text-gray-600 text-base leading-relaxed mb-4">
-                  In this game, you'll be shown an AI-generated image. Your challenge is to guess the exact prompt used to generate it. The closer your guess is to the original prompt, the higher your semantic match score!
-                </p>
-                <div className="bg-purple-100 text-purple-800 p-4 rounded-xl mb-6">
-                  <p className="font-semibold text-sm">
-                    To play this game and win exciting GDG swags, please visit our physical stall and request access.
-                  </p>
-                </div>
-                
-                {requestStatus === 'none' && (
-                  <button 
-                    onClick={async () => {
-                      if (!auth.currentUser) return;
-                      const reqId = `${auth.currentUser.uid}_prompt-wars`;
-                      await setDoc(doc(db, 'gameRequests', reqId), {
-                        userId: auth.currentUser.uid,
-                        userName: auth.currentUser.displayName || 'Player',
-                        userEmail: auth.currentUser.email,
-                        gameId: 'prompt-wars',
-                        status: 'pending',
-                        lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                        timestamp: serverTimestamp()
-                      });
-                    }}
-                    className="w-full inline-flex justify-center items-center px-8 py-4 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg mb-4"
-                  >
-                    Request to Play
-                  </button>
-                )}
-                
-                {requestStatus === 'pending' && (
-                  <div className="flex flex-col gap-3 mb-4">
-                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-xl flex items-center justify-center gap-3">
-                      <div className="w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="font-bold">Waiting for Admin Approval...</span>
-                    </div>
-                    <div className="text-center font-mono text-xl font-bold bg-gray-50 py-2 rounded-lg border border-gray-200">
-                      Lobby Code: <span className="text-purple-600">{lobbyCode || '...'}</span>
-                    </div>
-                  </div>
-                )}
 
-                <button 
-                  onClick={async () => {
-                    if (!requestId) return;
-                    try {
-                      await deleteDoc(doc(db, 'gameRequests', requestId));
-                    } catch(e) {}
-                  }}
-                  className="w-full inline-flex justify-center items-center px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-sm transition-colors"
-                >
-                  Cancel Request
-                </button>
+                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                  <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">
+                    Things to name: {contentWords(currentRound.prompt).length}
+                  </span>
+                  <span
+                    className={`flex items-center gap-1.5 font-bold ${
+                      timeLeft <= 10 && imageReady ? 'text-[#EA4335] animate-pulse' : 'text-gray-700'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    {imageReady ? `${timeLeft}s` : '—'}
+                  </span>
+                </div>
               </div>
-            ) : (
-              <div className="bg-gray-50/80 border border-gray-200 p-6 md:p-8 rounded-3xl shadow-xl shadow-purple-900/10">
-                <div className="mb-6">
-                  <label htmlFor="promptGuess" className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">
-                    Your Prompt
-                  </label>
-                  <div className="relative">
+
+              <div className="flex flex-col justify-center">
+                {gameState === 'roundResult' && lastResult ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-gray-50 border border-gray-200 rounded-2xl p-6 text-center"
+                  >
+                    <p className="text-gray-500 uppercase tracking-widest text-xs mb-1">Match</p>
+                    <p className="text-5xl font-black text-[#9C27B0] mb-4">
+                      {Math.round(lastResult.ratio * 100)}%
+                    </p>
+
+                    <p className="text-sm text-gray-500 mb-1">The actual prompt was</p>
+                    <p className="text-lg font-bold text-gray-900 mb-4">"{currentRound.prompt}"</p>
+
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {lastResult.matched.map((w) => (
+                        <span
+                          key={w}
+                          className="px-3 py-1 rounded-full bg-[#e6f4ea] text-[#188038] text-sm font-bold"
+                        >
+                          ✓ {w}
+                        </span>
+                      ))}
+                      {lastResult.missed.map((w) => (
+                        <span
+                          key={w}
+                          className="px-3 py-1 rounded-full bg-[#fce8e6] text-[#c5221f] text-sm font-bold"
+                        >
+                          ✗ {w}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <form
+                    onSubmit={handleSubmit}
+                    className="bg-gray-50/80 border border-gray-200 p-6 rounded-3xl shadow-lg"
+                  >
+                    <label
+                      htmlFor="promptGuess"
+                      className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider"
+                    >
+                      What was the prompt?
+                    </label>
                     <textarea
                       id="promptGuess"
                       value={promptGuess}
                       onChange={(e) => setPromptGuess(e.target.value)}
-                      placeholder="A cinematic shot of..."
-                      className="w-full bg-white border border-gray-200 rounded-xl p-4 min-h-[160px] text-gray-900 placeholder-gray-600 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all resize-none"
-                      maxLength={500}
+                      disabled={!imageReady}
+                      placeholder="e.g. a red apple on a wooden table"
+                      className="w-full bg-white border border-gray-200 rounded-xl p-4 min-h-[140px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#9C27B0] focus:ring-1 focus:ring-[#9C27B0] transition-all resize-none disabled:opacity-50"
+                      maxLength={200}
+                      autoComplete="off"
                     />
-                    <div className="absolute bottom-4 right-4 text-xs text-gray-500 font-medium">
-                      {promptGuess.length}/500
-                    </div>
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-                    {error}
-                  </div>
+                    <button
+                      type="submit"
+                      disabled={!imageReady || !promptGuess.trim()}
+                      className="w-full mt-4 bg-[#9C27B0] hover:bg-purple-700 text-white rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg py-4"
+                    >
+                      Submit Guess <Send className="w-5 h-5" />
+                    </button>
+                  </form>
                 )}
-
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || !promptGuess.trim()}
-                    className="w-full bg-[#4285F4] hover:bg-blue-600 text-white rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-900/20 py-4"
-                  >
-                    {isSubmitting ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                      />
-                    ) : (
-                      <>
-                        Submit Guess <Send className="w-5 h-5" />
-                      </>
-                    )}
-                  </button>
               </div>
-            )}
-          </motion.div>
-        </div>
+            </motion.div>
+          )}
+
+          {gameState === 'finalResult' && (
+            <motion.div
+              key="final"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-md mx-auto bg-gray-50 border border-gray-200 rounded-3xl p-8 text-center shadow-2xl"
+            >
+              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trophy className="w-10 h-10 text-[#9C27B0]" />
+              </div>
+              <h3 className="text-3xl font-black mb-6 text-gray-900">Game Over!</h3>
+
+              <div className="space-y-2 mb-6">
+                {rounds.map((r, i) => (
+                  <div
+                    key={r.id}
+                    className="flex justify-between items-center bg-white border border-gray-200 rounded-xl px-4 py-3"
+                  >
+                    <span className="text-sm text-gray-600 truncate mr-3">"{r.prompt}"</span>
+                    <span className="font-black text-[#9C27B0] shrink-0">
+                      {Math.round((ratiosRef.current[i] || 0) * 100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-white rounded-2xl py-4 mb-8 border border-gray-200">
+                <p className="text-gray-500 uppercase tracking-widest text-xs mb-1">Arcade Points</p>
+                <p className="text-4xl font-black text-[#9C27B0]">
+                  {earnedPoints === null ? '—' : earnedPoints}
+                  <span className="text-lg text-gray-400"> / 100</span>
+                </p>
+                {earnedPoints === 0 && (
+                  <p className="text-xs text-gray-500 mt-2 px-2">
+                    You need {PASS_MARK_PCT}% to score. Nothing added this time — try again!
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {isAdmin && (
+                  <button
+                    onClick={startGame}
+                    className="w-full inline-flex justify-center items-center gap-2 px-6 py-4 bg-white hover:bg-gray-50 text-gray-800 rounded-xl font-bold border border-gray-200 transition-colors"
+                  >
+                    <RotateCcw className="w-5 h-5" /> Play Again
+                  </button>
+                )}
+                <button
+                  onClick={() => navigate('/arcade')}
+                  className="w-full px-6 py-4 bg-[#4285F4] hover:bg-blue-600 text-white rounded-xl font-bold transition-colors shadow-lg"
+                >
+                  Back to Arcade
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

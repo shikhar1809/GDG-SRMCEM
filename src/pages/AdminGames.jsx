@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { db, auth, googleProvider } from '../firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { Shield, RefreshCw, LogOut, Users, Settings, Brain, Search, Globe, Power, AlertTriangle, Flame, Ghost, Eye, Trophy } from 'lucide-react';
+import { Shield, RefreshCw, LogOut, Users, Settings, Brain, Search, Globe, Power, AlertTriangle, Flame, Ghost, Eye, Trophy, Lightbulb, Unlock } from 'lucide-react';
+import { ALL_LEVELS, MEGA_LEVEL, NORMAL_LEVELS, normalizeCode, claimedNormalCount } from '../utils/huntConfig';
 
 const SUPER_ADMINS = ['royalshikher@gmail.com', 'i.e.ishantiwari@gmail.com'];
 
@@ -14,7 +15,8 @@ export default function AdminGames() {
   
   // Mystery Hunt State
   const [players, setPlayers] = useState([]);
-  const [codes, setCodes] = useState({}); // { level: code }
+  const [huntLevels, setHuntLevels] = useState({}); // { level: {hint, code, formUrl} }
+  const [huntClaims, setHuntClaims] = useState({}); // { level: claim }
   
   // Game Requests State
   const [gameRequests, setGameRequests] = useState([]);
@@ -106,20 +108,43 @@ export default function AdminGames() {
     });
 
 
-    // Fetch Mystery Hunt Codes
-    const fetchCodes = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'levelCodes'));
-        const newCodes = {};
+    // Mystery Hunt: public level board (hints) + who has claimed what.
+    const huntLevelsUnsub = onSnapshot(collection(db, 'huntLevels'), (snap) => {
+      setHuntLevels(prev => {
+        const next = { ...prev };
         snap.forEach(d => {
-          newCodes[d.data().level] = d.id;
+          const lvl = Number(d.data().level ?? d.id);
+          next[lvl] = { ...next[lvl], hint: d.data().hint || '' };
         });
-        setCodes(newCodes);
+        return next;
+      });
+    });
+
+    const huntClaimsUnsub = onSnapshot(collection(db, 'huntClaims'), (snap) => {
+      const next = {};
+      snap.forEach(d => { next[Number(d.data().level ?? d.id)] = { id: d.id, ...d.data() }; });
+      setHuntClaims(next);
+    });
+
+    // Codes live in huntLevelCodes keyed BY the code, and listing is blocked for
+    // players. Admins can list, which is how we recover the current code + form
+    // link to show in these boxes.
+    const fetchHuntCodes = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'huntLevelCodes'));
+        setHuntLevels(prev => {
+          const next = { ...prev };
+          snap.forEach(d => {
+            const lvl = Number(d.data().level);
+            next[lvl] = { ...next[lvl], code: d.id, formUrl: d.data().formUrl || '' };
+          });
+          return next;
+        });
       } catch (e) {
-        console.error("Failed to fetch codes (are you an admin?)", e);
+        console.error("Failed to fetch hunt codes (are you an admin?)", e);
       }
     };
-    fetchCodes();
+    fetchHuntCodes();
 
     return () => {
       configUnsub();
@@ -128,6 +153,8 @@ export default function AdminGames() {
       pwSubsUnsub();
       requestsUnsub();
       arcadeUnsub();
+      huntLevelsUnsub();
+      huntClaimsUnsub();
     };
   }, [user]);
 
@@ -147,16 +174,24 @@ export default function AdminGames() {
     }
   };
 
+  // Wipes every claim so all levels reopen. Clues, codes and form links are
+  // kept - this resets the race, not the configuration.
   const handleRestartAll = async () => {
-    if (!window.confirm("Are you sure you want to restart the hunt for ALL players? This will reset everyone to level 1.")) return;
+    const claimed = Object.keys(huntClaims).length;
+    if (
+      !window.confirm(
+        `Reopen ALL hunt levels? This deletes ${claimed} claim(s), so every level goes back up for grabs and the Mega Level re-locks. Clues and codes are kept.`
+      )
+    )
+      return;
     try {
-      await setDoc(doc(db, 'huntConfig', 'global'), {
-        globalRestartToken: Date.now()
-      }, { merge: true });
-      alert("Hunt restarted for all players!");
+      await Promise.all(
+        Object.keys(huntClaims).map((level) => deleteDoc(doc(db, 'huntClaims', String(level))))
+      );
+      alert('All levels reopened.');
     } catch (e) {
       console.error(e);
-      alert("Failed to restart");
+      alert('Failed to reset the hunt. Ensure you have admin privileges.');
     }
   };
 
@@ -173,30 +208,59 @@ export default function AdminGames() {
     setSaving(false);
   };
 
+  const setHuntField = (level, field, value) =>
+    setHuntLevels(prev => ({ ...prev, [level]: { ...prev[level], [field]: value } }));
+
   const handleSaveMysteryConfig = async () => {
     setSaving(true);
     try {
-      const snap = await getDocs(collection(db, 'levelCodes'));
-      const existing = {}; // { level: code }
-      snap.forEach(d => { existing[d.data().level] = d.id; });
+      // Existing code docs, so a changed code deletes the old one instead of
+      // leaving a second working code behind.
+      const snap = await getDocs(collection(db, 'huntLevelCodes'));
+      const existingByLevel = {};
+      snap.forEach(d => { existingByLevel[Number(d.data().level)] = d.id; });
 
-      for (let i = 1; i <= 10; i++) {
-        const newCode = codes[i];
-        const oldCode = existing[i];
+      for (const level of ALL_LEVELS) {
+        const cfg = huntLevels[level] || {};
+        const hint = (cfg.hint || '').trim();
+        const code = normalizeCode(cfg.code || '');
+        const formUrl = (cfg.formUrl || '').trim();
 
-        if (newCode && newCode !== oldCode) {
-          if (oldCode) {
-            await deleteDoc(doc(db, 'levelCodes', oldCode));
-          }
-          await setDoc(doc(db, 'levelCodes', newCode), { level: i });
+        // Public board doc: hint only. Never the code or the form link.
+        await setDoc(doc(db, 'huntLevels', String(level)), {
+          level,
+          hint,
+          isMega: level === MEGA_LEVEL,
+        }, { merge: true });
+
+        const oldCode = existingByLevel[level];
+        if (!code) {
+          if (oldCode) await deleteDoc(doc(db, 'huntLevelCodes', oldCode));
+          continue;
         }
+        if (oldCode && oldCode !== code) {
+          await deleteDoc(doc(db, 'huntLevelCodes', oldCode));
+        }
+        await setDoc(doc(db, 'huntLevelCodes', code), { level, formUrl });
       }
-      alert("Mystery Hunt codes saved successfully!");
+      alert("Mystery Hunt configuration saved.");
     } catch (e) {
       console.error(e);
       alert("Failed to save. Ensure you have admin privileges.");
     }
     setSaving(false);
+  };
+
+  const handleReleaseLevel = async (level) => {
+    const claim = huntClaims[level];
+    if (!claim) return;
+    if (!window.confirm(`Release Level ${level}? ${claim.displayName || 'The current winner'} will lose the claim and the level reopens for everyone.`)) return;
+    try {
+      await deleteDoc(doc(db, 'huntClaims', String(level)));
+    } catch (e) {
+      console.error(e);
+      alert("Failed to release the level.");
+    }
   };
 
   const handleSavePromptWars = async () => {
@@ -523,39 +587,108 @@ export default function AdminGames() {
               </div>
             </div>
 
-            {/* Level Codes */}
+            {/* Per-level hint / code / form configuration */}
             <div className="lg:col-span-2 bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-800">
-                <Search className="text-[#FBBC04]" /> Level Codes Configuration
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {[...Array(10)].map((_, i) => {
-                  const level = i + 1;
+              <div className="flex items-start justify-between gap-4 mb-2 flex-wrap">
+                <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
+                  <Search className="text-[#FBBC04]" /> Hunt Levels
+                </h2>
+                <span className="text-sm font-bold bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full">
+                  {claimedNormalCount(huntClaims)}/{NORMAL_LEVELS} claimed
+                  {claimedNormalCount(huntClaims) >= NORMAL_LEVELS && ' — MEGA UNLOCKED'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 mb-6">
+                All {NORMAL_LEVELS} levels are open to players at once and each has exactly one winner.
+                The clue is public; the code and form link stay hidden until someone cracks the level.
+                Level {MEGA_LEVEL} stays sealed until all {NORMAL_LEVELS} are claimed.
+              </p>
+
+              <div className="space-y-4 mb-8">
+                {ALL_LEVELS.map((level) => {
+                  const cfg = huntLevels[level] || {};
+                  const claim = huntClaims[level];
+                  const mega = level === MEGA_LEVEL;
                   return (
-                    <div key={level} className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                      <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Level {level} Code</label>
-                      <input 
-                        type="text" 
-                        value={codes[level] || ''} 
-                        onChange={e => setCodes({...codes, [level]: e.target.value.trim()})}
-                        className="w-full border-2 border-gray-200 rounded-xl p-3 focus:outline-none focus:border-[#FBBC04] transition-colors"
-                        placeholder={`Code for Level ${level}`}
+                    <div
+                      key={level}
+                      className={`p-4 rounded-2xl border ${mega ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-100'}`}
+                    >
+                      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+                        <span className="font-black text-gray-800">
+                          {mega ? `MEGA — Level ${level}` : `Level ${level}`}
+                        </span>
+                        {claim ? (
+                          <span className="flex items-center gap-2">
+                            <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">
+                              Won by {claim.displayName || claim.email}
+                            </span>
+                            <button
+                              onClick={() => handleReleaseLevel(level)}
+                              className="text-xs font-bold bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full inline-flex items-center gap-1"
+                            >
+                              <Unlock size={12} /> Release
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full">
+                            Open
+                          </span>
+                        )}
+                      </div>
+
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                        <Lightbulb size={11} className="inline mr-1" />
+                        Clue shown to players
+                      </label>
+                      <textarea
+                        value={cfg.hint || ''}
+                        onChange={(e) => setHuntField(level, 'hint', e.target.value)}
+                        rows={2}
+                        placeholder={mega ? 'Clue for the final mega level' : `Where is the QR for level ${level}?`}
+                        className="w-full border-2 border-gray-200 rounded-xl p-3 mb-3 text-sm focus:outline-none focus:border-[#FBBC04] transition-colors resize-none"
                       />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                            Secret code (on the QR)
+                          </label>
+                          <input
+                            type="text"
+                            value={cfg.code || ''}
+                            onChange={(e) => setHuntField(level, 'code', e.target.value.toUpperCase())}
+                            placeholder="e.g. GDG7X2"
+                            className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm font-mono tracking-widest focus:outline-none focus:border-[#FBBC04] transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide">
+                            Google Form link
+                          </label>
+                          <input
+                            type="url"
+                            value={cfg.formUrl || ''}
+                            onChange={(e) => setHuntField(level, 'formUrl', e.target.value)}
+                            placeholder="https://forms.gle/..."
+                            className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#FBBC04] transition-colors"
+                          />
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
 
-              <button 
+              <button
                 onClick={handleSaveMysteryConfig}
                 disabled={saving}
                 className="w-full bg-[#FBBC04] hover:bg-yellow-500 text-gray-900 font-bold py-4 rounded-xl transition-colors disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save Mystery Hunt Codes'}
+                {saving ? 'Saving...' : 'Save All Hunt Levels'}
               </button>
             </div>
-            
+
             {/* Active Players Table */}
             <div className="lg:col-span-3 bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 mt-2">
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-800">

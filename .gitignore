@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+dist-playtest/
+
+# Firebase deploy cache (regenerated on every deploy)
+.firebase/

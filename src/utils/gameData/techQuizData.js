@@ -1,502 +1,373 @@
+// TECH-O-FIRE question bank.
+//
+// Audience is B.Tech FIRST YEAR, so the tiers are pitched at what they have
+// actually met by semester 1-2:
+//   easy    general tech literacy - phones, browsers, big tech, acronyms
+//   medium  intro programming / CS fundamentals from first-year coursework
+//   hard    stretch questions; only ONE per game so nobody is buried by them
+//
+// correctIndex here is only the answer's position in this file - options are
+// shuffled at runtime (see TechQuiz.jsx), so the queue behind a player cannot
+// memorise "it's always the third one".
+
 export const TECH_QUIZ_QUESTIONS = [
+  // --- easy -----------------------------------------------------------------
   {
-    "question": "What does HTML stand for?",
-    "options": [
-      "Hyper Text Markup Language",
-      "High Text Markup Language",
-      "Hyper Tabular Markup Language",
-      "None of these"
-    ],
-    "correctIndex": 0
+    question: 'What does HTML stand for?',
+    options: ['Hyper Text Markup Language', 'High Text Machine Language', 'Hyper Tabular Markup Language', 'Home Tool Markup Language'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Who is often called the world first computer programmer?",
-    "options": [
-      "Ada Lovelace",
-      "Alan Turing",
-      "Grace Hopper",
-      "Charles Babbage"
-    ],
-    "correctIndex": 0
+    question: 'What does CPU stand for?',
+    options: ['Central Processing Unit', 'Computer Personal Unit', 'Central Process Utility', 'Core Processing Unit'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What does CPU stand for?",
-    "options": [
-      "Computer Personal Unit",
-      "Central Process Unit",
-      "Central Processing Unit",
-      "Central Processor Unit"
-    ],
-    "correctIndex": 2
+    question: 'What does RAM stand for?',
+    options: ['Random Access Memory', 'Rapid Access Memory', 'Readable Active Memory', 'Remote Access Module'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Which company developed the Java programming language?",
-    "options": [
-      "Microsoft",
-      "Apple",
-      "Sun Microsystems",
-      "IBM"
-    ],
-    "correctIndex": 2
+    question: 'Which company created the Android operating system?',
+    options: ['Google', 'Apple', 'Samsung', 'Microsoft'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What does HTTP stand for?",
-    "options": [
-      "HyperText Transfer Protocol",
-      "HyperText Transmission Protocol",
-      "HyperText Test Protocol",
-      "Hyperlink Transfer Technology"
-    ],
-    "correctIndex": 0
+    question: 'What does "www" stand for in a website address?',
+    options: ['World Wide Web', 'Web World Wide', 'Wide Web World', 'World Web Wide'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What is the main function of a DNS server?",
-    "options": [
-      "Host websites",
-      "Translate domain names to IP addresses",
-      "Provide internet connection",
-      "Encrypt data"
-    ],
-    "correctIndex": 1
+    question: 'Which of these is a search engine?',
+    options: ['Bing', 'Photoshop', 'Excel', 'Blender'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Which programming language is known for its use in machine learning and data science?",
-    "options": [
-      "Java",
-      "C++",
-      "Python",
-      "Ruby"
-    ],
-    "correctIndex": 2
+    question: 'Who is the co-founder of Microsoft alongside Bill Gates?',
+    options: ['Paul Allen', 'Steve Jobs', 'Steve Ballmer', 'Larry Page'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What year was the first iPhone released?",
-    "options": [
-      "2005",
-      "2007",
-      "2008",
-      "2010"
-    ],
-    "correctIndex": 1
+    question: 'What does GPU stand for?',
+    options: ['Graphics Processing Unit', 'General Processing Unit', 'Graphical Peripheral Unit', 'Game Processing Unit'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What is the full form of RAM?",
-    "options": [
-      "Random Access Memory",
-      "Read Access Memory",
-      "Run Accept Memory",
-      "Random Active Memory"
-    ],
-    "correctIndex": 0
+    question: 'Which company owns YouTube?',
+    options: ['Google', 'Meta', 'Amazon', 'Netflix'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Which protocol is used to send email?",
-    "options": [
-      "HTTP",
-      "SMTP",
-      "FTP",
-      "POP3"
-    ],
-    "correctIndex": 1
+    question: 'What does URL stand for?',
+    options: ['Uniform Resource Locator', 'Universal Resource Link', 'Uniform Reference Locator', 'United Resource Locator'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What does CSS stand for?",
-    "options": [
-      "Cascading Style Sheets",
-      "Computer Style Sheets",
-      "Creative Style System",
-      "Colorful Style Sheets"
-    ],
-    "correctIndex": 0
+    question: 'Which of these is an operating system?',
+    options: ['Linux', 'Firefox', 'Oracle', 'Python'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Who is the co-founder of Microsoft alongside Bill Gates?",
-    "options": [
-      "Steve Jobs",
-      "Steve Wozniak",
-      "Paul Allen",
-      "Larry Ellison"
-    ],
-    "correctIndex": 2
+    question: 'In computing, what is a "bug"?',
+    options: ['An error or flaw in software', 'A type of virus', 'A hardware upgrade', 'A network cable'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Which operating system is based on the Linux kernel?",
-    "options": [
-      "Windows",
-      "macOS",
-      "Android",
-      "iOS"
-    ],
-    "correctIndex": 2
+    question: 'What does VPN stand for?',
+    options: ['Virtual Private Network', 'Verified Public Network', 'Virtual Public Node', 'Variable Private Network'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What does SQL stand for?",
-    "options": [
-      "Structured Query Language",
-      "Strong Question Language",
-      "Standard Query Language",
-      "Sequential Query Language"
-    ],
-    "correctIndex": 0
+    question: 'Which programming language shares its name with a type of coffee?',
+    options: ['Java', 'Python', 'Ruby', 'Swift'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What was the first commercially successful graphical user interface (GUI) operating system?",
-    "options": [
-      "Windows 95",
-      "Mac OS",
-      "Xerox Alto",
-      "AmigaOS"
-    ],
-    "correctIndex": 1
+    question: 'What does the "G" in 5G stand for?',
+    options: ['Generation', 'Gigabyte', 'Global', 'Gateway'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What is the standard port for HTTPS?",
-    "options": [
-      "80",
-      "21",
-      "443",
-      "22"
-    ],
-    "correctIndex": 2
+    question: 'Which company makes the iPhone?',
+    options: ['Apple', 'Samsung', 'Xiaomi', 'Nokia'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Which data structure uses LIFO (Last In, First Out)?",
-    "options": [
-      "Queue",
-      "Stack",
-      "Tree",
-      "Graph"
-    ],
-    "correctIndex": 1
+    question: 'What does PDF stand for?',
+    options: ['Portable Document Format', 'Printed Document File', 'Personal Data File', 'Public Document Format'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What does JSON stand for?",
-    "options": [
-      "JavaScript Object Notation",
-      "Java Standard Output Network",
-      "JavaScript Oriented Notation",
-      "Java Source Object Notation"
-    ],
-    "correctIndex": 0
+    question: 'Which of these is NOT a web browser?',
+    options: ['Photoshop', 'Chrome', 'Safari', 'Edge'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "In computer science, what is a \"bug\"?",
-    "options": [
-      "A virus",
-      "An error or flaw in software",
-      "A hardware malfunction",
-      "A feature request"
-    ],
-    "correctIndex": 1
+    question: 'Who is often called the world\'s first computer programmer?',
+    options: ['Ada Lovelace', 'Alan Turing', 'Grace Hopper', 'Charles Babbage'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Which company acquired GitHub in 2018?",
-    "options": [
-      "Google",
-      "Amazon",
-      "Facebook",
-      "Microsoft"
-    ],
-    "correctIndex": 3
+    question: 'What does Wi-Fi primarily let a device do?',
+    options: ['Connect to a network wirelessly', 'Increase storage space', 'Cool the processor', 'Charge the battery'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "What is the time complexity of binary search on a sorted array?",
-    "options": [
-      "O(1)",
-      "O(n)",
-      "O(n log n)",
-      "O(log n)"
-    ],
-    "correctIndex": 3
+    question: 'Which social media platform is known for short videos and was made by ByteDance?',
+    options: ['TikTok', 'LinkedIn', 'Pinterest', 'Reddit'],
+    correctIndex: 0,
+    difficulty: 'easy',
   },
   {
-    "question": "Which of the following is not a NoSQL database?",
-    "options": [
-      "MongoDB",
-      "Cassandra",
-      "PostgreSQL",
-      "Redis"
-    ],
-    "correctIndex": 2
+    question: 'What does "AI" stand for?',
+    options: ['Artificial Intelligence', 'Automated Interface', 'Advanced Integration', 'Applied Informatics'],
+    correctIndex: 0,
+    difficulty: 'easy',
+  },
+
+  // --- medium ---------------------------------------------------------------
+  {
+    question: 'What does CSS stand for?',
+    options: ['Cascading Style Sheets', 'Computer Style Sheets', 'Creative Style System', 'Coded Style Sheets'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What does API stand for?",
-    "options": [
-      "Application Programming Interface",
-      "Advanced Programming Interface",
-      "Application Process Integration",
-      "Automated Program Interface"
-    ],
-    "correctIndex": 0
+    question: 'Which data structure works on LIFO (Last In, First Out)?',
+    options: ['Stack', 'Queue', 'Linked List', 'Tree'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which design pattern restricts the instantiation of a class to one object?",
-    "options": [
-      "Factory",
-      "Observer",
-      "Singleton",
-      "Decorator"
-    ],
-    "correctIndex": 2
+    question: 'Which data structure works on FIFO (First In, First Out)?',
+    options: ['Queue', 'Stack', 'Graph', 'Heap'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What is the name of the version control system created by Linus Torvalds?",
-    "options": [
-      "SVN",
-      "Mercurial",
-      "Git",
-      "CVS"
-    ],
-    "correctIndex": 2
+    question: 'In most programming languages, what is the index of the first element of an array?',
+    options: ['0', '1', '-1', 'It depends on the array size'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which of these is a JavaScript framework developed by Facebook?",
-    "options": [
-      "Angular",
-      "Vue",
-      "React",
-      "Svelte"
-    ],
-    "correctIndex": 2
+    question: 'What does SQL stand for?',
+    options: ['Structured Query Language', 'Sequential Query Language', 'Standard Question Language', 'System Query Logic'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What does DOM stand for in web development?",
-    "options": [
-      "Document Object Model",
-      "Data Object Model",
-      "Dynamic Object Model",
-      "Digital Object Memory"
-    ],
-    "correctIndex": 0
+    question: 'What is the decimal value of the binary number 1010?',
+    options: ['10', '8', '12', '20'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What is the default port for MongoDB?",
-    "options": [
-      "3306",
-      "27017",
-      "5432",
-      "8080"
-    ],
-    "correctIndex": 1
+    question: 'Who created the Git version control system?',
+    options: ['Linus Torvalds', 'Dennis Ritchie', 'Guido van Rossum', 'James Gosling'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which AWS service is used for scalable object storage?",
-    "options": [
-      "EC2",
-      "RDS",
-      "S3",
-      "Lambda"
-    ],
-    "correctIndex": 2
+    question: 'What does IDE stand for in software development?',
+    options: ['Integrated Development Environment', 'Internal Data Engine', 'Interactive Design Editor', 'Integrated Debugging Extension'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What does SaaS stand for?",
-    "options": [
-      "Software as a Service",
-      "System as a Service",
-      "Storage as a Service",
-      "Security as a Service"
-    ],
-    "correctIndex": 0
+    question: 'Which company developed the Java programming language?',
+    options: ['Sun Microsystems', 'Microsoft', 'IBM', 'Apple'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which language is primarily used for iOS app development alongside Objective-C?",
-    "options": [
-      "Kotlin",
-      "Swift",
-      "Java",
-      "Dart"
-    ],
-    "correctIndex": 1
+    question: 'Which JavaScript library for building user interfaces was created at Facebook?',
+    options: ['React', 'Angular', 'Vue', 'Svelte'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What does GPU stand for?",
-    "options": [
-      "Graphical Process Unit",
-      "Graphics Processing Unit",
-      "General Processing Unit",
-      "Global Process Unit"
-    ],
-    "correctIndex": 1
+    question: 'What does API stand for?',
+    options: ['Application Programming Interface', 'Applied Program Instruction', 'Automated Process Integration', 'Application Process Identifier'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which of these is a popular cross-platform mobile framework by Google?",
-    "options": [
-      "React Native",
-      "Xamarin",
-      "Flutter",
-      "Ionic"
-    ],
-    "correctIndex": 2
+    question: 'What does JSON stand for?',
+    options: ['JavaScript Object Notation', 'Java Standard Output Name', 'JavaScript Ordered Nodes', 'Joined Simple Object Notation'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What is the main purpose of a Docker container?",
-    "options": [
-      "To run virtual machines",
-      "To package an application and its dependencies together",
-      "To store large amounts of data",
-      "To secure a network"
-    ],
-    "correctIndex": 1
+    question: 'Which command downloads a copy of a remote Git repository to your machine?',
+    options: ['git clone', 'git push', 'git branch', 'git commit'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What is the maximum value of a 8-bit unsigned integer?",
-    "options": [
-      "128",
-      "255",
-      "256",
-      "512"
-    ],
-    "correctIndex": 1
+    question: 'What is the largest value an 8-bit unsigned integer can hold?',
+    options: ['255', '256', '128', '512'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which company developed the React programming framework?",
-    "options": [
-      "Google",
-      "Microsoft",
-      "Meta",
-      "Amazon"
-    ],
-    "correctIndex": 2
+    question: 'Which company acquired GitHub in 2018?',
+    options: ['Microsoft', 'Google', 'Amazon', 'Oracle'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What is the primary function of a firewall?",
-    "options": [
-      "To speed up the internet",
-      "To monitor and control network traffic",
-      "To store passwords",
-      "To clean viruses"
-    ],
-    "correctIndex": 1
+    question: 'Which of these languages is NOT object-oriented?',
+    options: ['C', 'C++', 'Java', 'Python'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which of these languages is NOT object-oriented?",
-    "options": [
-      "Java",
-      "C++",
-      "C",
-      "Python"
-    ],
-    "correctIndex": 2
+    question: 'What does DOM stand for in web development?',
+    options: ['Document Object Model', 'Data Object Mapping', 'Domain Oriented Markup', 'Dynamic Output Method'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What does IDE stand for?",
-    "options": [
-      "Integrated Development Environment",
-      "Interactive Design Environment",
-      "Internet Development Engine",
-      "Internal Data Execution"
-    ],
-    "correctIndex": 0
+    question: 'Which language is mainly used for building native iOS apps today?',
+    options: ['Swift', 'Kotlin', 'Dart', 'Go'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What is the primary purpose of Redux in a React application?",
-    "options": [
-      "Styling",
-      "Routing",
-      "State Management",
-      "Database interaction"
-    ],
-    "correctIndex": 2
+    question: 'Which cross-platform app framework was created by Google?',
+    options: ['Flutter', 'React Native', 'Ionic', 'Xamarin'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "Which of the following is a CSS preprocessor?",
-    "options": [
-      "SASS",
-      "HTML",
-      "jQuery",
-      "Node.js"
-    ],
-    "correctIndex": 0
+    question: 'What is the main job of a firewall?',
+    options: ['Monitor and control network traffic', 'Speed up the processor', 'Back up files automatically', 'Compress large images'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What does VPN stand for?",
-    "options": [
-      "Virtual Public Network",
-      "Virtual Private Network",
-      "Verified Personal Network",
-      "Visual Private Node"
-    ],
-    "correctIndex": 1
+    question: 'Which of these is a NoSQL database?',
+    options: ['MongoDB', 'PostgreSQL', 'MySQL', 'SQLite'],
+    correctIndex: 0,
+    difficulty: 'medium',
   },
   {
-    "question": "What is the standard port for SSH?",
-    "options": [
-      "21",
-      "22",
-      "80",
-      "443"
-    ],
-    "correctIndex": 1
+    question: 'What does an operating system\'s "kernel" do?',
+    options: ['Manages hardware and core system resources', 'Renders the desktop wallpaper', 'Stores user documents', 'Compiles source code'],
+    correctIndex: 0,
+    difficulty: 'medium',
+  },
+
+  // --- hard -----------------------------------------------------------------
+  {
+    question: 'What is the time complexity of binary search on a sorted array?',
+    options: ['O(log n)', 'O(n)', 'O(n log n)', 'O(1)'],
+    correctIndex: 0,
+    difficulty: 'hard',
   },
   {
-    "question": "Which company developed the Kotlin programming language?",
-    "options": [
-      "Google",
-      "JetBrains",
-      "Microsoft",
-      "Apple"
-    ],
-    "correctIndex": 1
+    question: 'Which port does HTTPS use by default?',
+    options: ['443', '80', '22', '8080'],
+    correctIndex: 0,
+    difficulty: 'hard',
   },
   {
-    "question": "What does URL stand for?",
-    "options": [
-      "Universal Resource Locator",
-      "Uniform Resource Locator",
-      "Unified Resource Link",
-      "Uniform Resource Link"
-    ],
-    "correctIndex": 1
+    question: 'Which port does SSH use by default?',
+    options: ['22', '21', '443', '3306'],
+    correctIndex: 0,
+    difficulty: 'hard',
   },
   {
-    "question": "Which HTTP method is typically used to create a new resource?",
-    "options": [
-      "GET",
-      "POST",
-      "PUT",
-      "DELETE"
-    ],
-    "correctIndex": 1
+    question: 'Which design pattern restricts a class to a single instance?',
+    options: ['Singleton', 'Factory', 'Observer', 'Adapter'],
+    correctIndex: 0,
+    difficulty: 'hard',
   },
   {
-    "question": "What does JWT stand for?",
-    "options": [
-      "Java Web Token",
-      "JSON Web Token",
-      "JavaScript Web Token",
-      "Jumbo Web Token"
-    ],
-    "correctIndex": 1
+    question: 'What is the main purpose of a Docker container?',
+    options: ['Package an app with its dependencies so it runs anywhere', 'Encrypt network traffic', 'Speed up database queries', 'Replace the operating system kernel'],
+    correctIndex: 0,
+    difficulty: 'hard',
   },
   {
-    "question": "Which of these is a popular NoSQL database?",
-    "options": [
-      "MySQL",
-      "PostgreSQL",
-      "MongoDB",
-      "Oracle DB"
-    ],
-    "correctIndex": 2
+    question: 'What does JWT stand for?',
+    options: ['JSON Web Token', 'Java Web Toolkit', 'JavaScript Web Transfer', 'Joined Web Ticket'],
+    correctIndex: 0,
+    difficulty: 'hard',
   },
   {
-    "question": "What is the process of finding and fixing errors in code called?",
-    "options": [
-      "Compiling",
-      "Executing",
-      "Debugging",
-      "Deploying"
-    ],
-    "correctIndex": 2
+    question: 'Which AWS service provides scalable object storage?',
+    options: ['S3', 'EC2', 'Lambda', 'Route 53'],
+    correctIndex: 0,
+    difficulty: 'hard',
   },
   {
-    "question": "Which command is used to copy a git repository to your local machine?",
-    "options": [
-      "git pull",
-      "git push",
-      "git clone",
-      "git copy"
-    ],
-    "correctIndex": 2
-  }
+    question: 'What is Redux primarily used for in a React application?',
+    options: ['State management', 'Routing between pages', 'Styling components', 'Running unit tests'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
+  {
+    question: 'Which HTTP method is normally used to create a new resource?',
+    options: ['POST', 'GET', 'DELETE', 'HEAD'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
+  {
+    question: 'Which company created the Kotlin programming language?',
+    options: ['JetBrains', 'Google', 'Oracle', 'Microsoft'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
+  {
+    question: 'Which of these is a CSS preprocessor?',
+    options: ['SASS', 'Babel', 'Webpack', 'ESLint'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
+  {
+    question: 'What does SaaS stand for?',
+    options: ['Software as a Service', 'Storage as a Service', 'System as a Service', 'Security as a Service'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
+  {
+    question: 'In Big-O terms, what is the average time complexity of quicksort?',
+    options: ['O(n log n)', 'O(n)', 'O(n squared)', 'O(log n)'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
+  {
+    question: 'What does a "404" HTTP status code mean?',
+    options: ['Not Found', 'Server Error', 'Unauthorized', 'Request Timeout'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
+  {
+    question: 'Which protocol translates domain names into IP addresses?',
+    options: ['DNS', 'DHCP', 'FTP', 'SMTP'],
+    correctIndex: 0,
+    difficulty: 'hard',
+  },
 ];

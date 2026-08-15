@@ -1,252 +1,72 @@
+// AI Eye image bank.
+//
+// The old set was unplayable as a *test*: the AI half was dragons, fantasy
+// castles and steampunk robots, so the answer was "is this thing real in real
+// life", not "does this photo look generated". Every player scored ~100.
+//
+// These prompts are deliberately photorealistic and mundane - the kind of shot
+// a phone camera would produce - so the player has to look for the actual
+// tells (hands, text, teeth, repeated texture, plastic skin, bent geometry).
+//
+// The game draws a guaranteed 50/50 real/AI split (see AIEye.jsx) so nobody can
+// pattern-match "it's been three AI in a row, this one must be real".
+
+const ai = (id, prompt, seed) => ({
+  id,
+  isAI: true,
+  src: `/game-images/ai-eye/${id}.jpg`,
+  // Kept so the set can be regenerated with scripts/fetchGameImages.mjs
+  remoteUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(
+    `${prompt}, photorealistic, shot on 35mm film, natural lighting, candid, high detail`
+  )}?width=768&height=768&nologo=true&seed=${seed}`,
+});
+
+const real = (id, seed) => ({
+  id,
+  isAI: false,
+  src: `/game-images/ai-eye/${id}.jpg`,
+  remoteUrl: `https://picsum.photos/seed/${seed}/768/768`,
+});
+
 export const AI_EYE_IMAGES = [
-  {
-    "id": "real_0",
-    "imageUrl": "https://picsum.photos/seed/real0/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_1",
-    "imageUrl": "https://picsum.photos/seed/real1/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_2",
-    "imageUrl": "https://picsum.photos/seed/real2/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_3",
-    "imageUrl": "https://picsum.photos/seed/real3/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_4",
-    "imageUrl": "https://picsum.photos/seed/real4/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_5",
-    "imageUrl": "https://picsum.photos/seed/real5/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_6",
-    "imageUrl": "https://picsum.photos/seed/real6/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_7",
-    "imageUrl": "https://picsum.photos/seed/real7/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_8",
-    "imageUrl": "https://picsum.photos/seed/real8/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_9",
-    "imageUrl": "https://picsum.photos/seed/real9/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_10",
-    "imageUrl": "https://picsum.photos/seed/real10/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_11",
-    "imageUrl": "https://picsum.photos/seed/real11/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_12",
-    "imageUrl": "https://picsum.photos/seed/real12/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_13",
-    "imageUrl": "https://picsum.photos/seed/real13/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_14",
-    "imageUrl": "https://picsum.photos/seed/real14/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_15",
-    "imageUrl": "https://picsum.photos/seed/real15/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_16",
-    "imageUrl": "https://picsum.photos/seed/real16/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_17",
-    "imageUrl": "https://picsum.photos/seed/real17/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_18",
-    "imageUrl": "https://picsum.photos/seed/real18/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_19",
-    "imageUrl": "https://picsum.photos/seed/real19/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_20",
-    "imageUrl": "https://picsum.photos/seed/real20/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_21",
-    "imageUrl": "https://picsum.photos/seed/real21/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_22",
-    "imageUrl": "https://picsum.photos/seed/real22/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_23",
-    "imageUrl": "https://picsum.photos/seed/real23/800/800",
-    "isAI": false
-  },
-  {
-    "id": "real_24",
-    "imageUrl": "https://picsum.photos/seed/real24/800/800",
-    "isAI": false
-  },
-  {
-    "id": "ai_0",
-    "imageUrl": "https://image.pollinations.ai/prompt/cyberpunk%20city?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_1",
-    "imageUrl": "https://image.pollinations.ai/prompt/steampunk%20robot?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_2",
-    "imageUrl": "https://image.pollinations.ai/prompt/fantasy%20castle?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_3",
-    "imageUrl": "https://image.pollinations.ai/prompt/alien%20landscape?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_4",
-    "imageUrl": "https://image.pollinations.ai/prompt/dragon%20in%20sky?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_5",
-    "imageUrl": "https://image.pollinations.ai/prompt/futuristic%20car?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_6",
-    "imageUrl": "https://image.pollinations.ai/prompt/neon%20glowing%20tree?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_7",
-    "imageUrl": "https://image.pollinations.ai/prompt/underwater%20city?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_8",
-    "imageUrl": "https://image.pollinations.ai/prompt/space%20colony?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_9",
-    "imageUrl": "https://image.pollinations.ai/prompt/magical%20forest?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_10",
-    "imageUrl": "https://image.pollinations.ai/prompt/holographic%20interface?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_11",
-    "imageUrl": "https://image.pollinations.ai/prompt/robot%20portrait?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_12",
-    "imageUrl": "https://image.pollinations.ai/prompt/floating%20island?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_13",
-    "imageUrl": "https://image.pollinations.ai/prompt/crystal%20cave?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_14",
-    "imageUrl": "https://image.pollinations.ai/prompt/time%20machine?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_15",
-    "imageUrl": "https://image.pollinations.ai/prompt/hacker%20desk?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_16",
-    "imageUrl": "https://image.pollinations.ai/prompt/virtual%20reality?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_17",
-    "imageUrl": "https://image.pollinations.ai/prompt/mech%20suit?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_18",
-    "imageUrl": "https://image.pollinations.ai/prompt/synthwave%20sunset?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_19",
-    "imageUrl": "https://image.pollinations.ai/prompt/cybernetic%20implant?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_20",
-    "imageUrl": "https://image.pollinations.ai/prompt/AI%20glowing%20brain?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_21",
-    "imageUrl": "https://image.pollinations.ai/prompt/digital%20matrix?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_22",
-    "imageUrl": "https://image.pollinations.ai/prompt/hologram%20projector?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_23",
-    "imageUrl": "https://image.pollinations.ai/prompt/futuristic%20weapon?width=800&height=800&nologo=true",
-    "isAI": true
-  },
-  {
-    "id": "ai_24",
-    "imageUrl": "https://image.pollinations.ai/prompt/neon%20signs%20rain?width=800&height=800&nologo=true",
-    "isAI": true
-  }
+  // --- AI generated, photorealistic ----------------------------------------
+  //
+  // These deliberately MIRROR the subject range of the real photos below
+  // (landscape, coastline, architecture, objects, distant figures). An earlier
+  // pass used portraits and food, and it broke the game: the real set from
+  // picsum contains no people and no food, so "there is a person in it" was a
+  // perfect tell and a player could score 10/10 without ever judging an image.
+  // Subject must carry no signal - only rendering quality should.
+  ai('ai_01', 'aerial view of a rocky coastline with turquoise water', 101),
+  ai('ai_02', 'misty pine forest on a steep mountain slope', 102),
+  ai('ai_03', 'city skyline at dusk under heavy clouds', 103),
+  ai('ai_04', 'ocean waves seen from directly above', 104),
+  ai('ai_05', 'a modern concrete building against an empty sky', 105),
+  ai('ai_06', 'a wooden pier stretching over a calm lake', 106),
+  ai('ai_07', 'snowy mountain range at sunrise', 107),
+  ai('ai_08', 'flat lay of disassembled camera parts on a white surface', 108),
+  ai('ai_09', 'an empty road through a desert at golden hour', 109),
+  ai('ai_10', 'an old weathered fishing boat on a shore', 110),
+  ai('ai_11', 'rooftops of an old european town in fog', 111),
+  ai('ai_12', 'a single bare tree in an open field', 112),
+  ai('ai_13', 'a weathered apartment building facade with many windows', 113),
+  ai('ai_14', 'a narrow canyon with light falling between rock walls', 114),
+  ai('ai_15', 'a small boat on a still green lake seen from far away', 115),
+
+  // --- real photographs ------------------------------------------------------
+  real('real_01', 'gdgreal01'),
+  real('real_02', 'gdgreal02'),
+  real('real_03', 'gdgreal03'),
+  real('real_04', 'gdgreal04'),
+  real('real_05', 'gdgreal05'),
+  real('real_06', 'gdgreal06'),
+  real('real_07', 'gdgreal07'),
+  real('real_08', 'gdgreal08'),
+  real('real_09', 'gdgreal09'),
+  real('real_10', 'gdgreal10'),
+  real('real_11', 'gdgreal11'),
+  real('real_12', 'gdgreal12'),
+  real('real_13', 'gdgreal13'),
+  real('real_14', 'gdgreal14'),
+  real('real_15', 'gdgreal15'),
 ];
