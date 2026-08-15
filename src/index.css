@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gdg-blue: #4285F4;
+  --color-gdg-red: #EA4335;
+  --color-gdg-yellow: #FBBC04;
+  --color-gdg-green: #34A853;
+  --color-background: 0 0% 100%;
+  --color-foreground: 0 0% 13%;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --font-sans: "Outfit", sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 13%;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-gray-900 font-sans antialiased overflow-x-hidden selection:bg-[#4285F4]/20;
+  }
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #4285F4, #EA4335, #FBBC04, #34A853);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
