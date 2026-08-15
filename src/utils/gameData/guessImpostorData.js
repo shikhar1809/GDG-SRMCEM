@@ -1,552 +1,356 @@
+// Guess The Impostor question bank.
+//
+// Two things were wrong with the old bank:
+//   1. impostorIndex was 3 in all 50 questions - the answer was ALWAYS the last
+//      option. Options are shuffled at runtime now (see GuessImpostor.jsx), and
+//      the indices below are varied too so a stale build can't leak the answer.
+//   2. Every impostor was a joke (Toaster, KFC, Sandwich). Nothing to think
+//      about. The medium and hard tiers below keep all four items inside tech,
+//      so the player has to know the actual distinction.
+//
+// Each game draws 2 easy + 3 medium + 1 hard, so the difficulty is identical
+// for every player in the queue.
+
 export const GUESS_IMPOSTOR_QUESTIONS = [
+  // --- easy: the impostor is obviously not a tech thing ---------------------
   {
-    "category": "Social Media Apps",
-    "items": [
-      "Facebook",
-      "Instagram",
-      "Twitter",
-      "Microsoft Excel"
-    ],
-    "impostorIndex": 3,
-    "reason": "Excel is a spreadsheet app, the rest are social media."
+    category: 'Social Media Apps',
+    items: ['Facebook', 'Instagram', 'Microsoft Excel', 'Twitter'],
+    impostorIndex: 2,
+    reason: 'Excel is a spreadsheet app, the rest are social media.',
+    difficulty: 'easy',
   },
   {
-    "category": "Web Browsers",
-    "items": [
-      "Chrome",
-      "Safari",
-      "Firefox",
-      "Photoshop"
-    ],
-    "impostorIndex": 3,
-    "reason": "Photoshop is for editing photos, the rest are browsers."
+    category: 'Tech Companies',
+    items: ['Google', "McDonald's", 'Apple', 'Microsoft'],
+    impostorIndex: 1,
+    reason: "McDonald's is a fast food chain, not a tech company.",
+    difficulty: 'easy',
   },
   {
-    "category": "Tech Companies",
-    "items": [
-      "Google",
-      "Apple",
-      "Microsoft",
-      "McDonalds"
-    ],
-    "impostorIndex": 3,
-    "reason": "McDonalds is a fast food chain, not a tech company."
+    category: 'Smartphone Brands',
+    items: ['Toyota', 'Samsung', 'Apple', 'OnePlus'],
+    impostorIndex: 0,
+    reason: 'Toyota makes cars, not smartphones.',
+    difficulty: 'easy',
   },
   {
-    "category": "Smartphone Brands",
-    "items": [
-      "Samsung",
-      "Apple",
-      "OnePlus",
-      "Toyota"
-    ],
-    "impostorIndex": 3,
-    "reason": "Toyota makes cars, not smartphones."
+    category: 'Programming Languages',
+    items: ['Python', 'Java', 'C++', 'English'],
+    impostorIndex: 3,
+    reason: 'English is a spoken language, not a programming language.',
+    difficulty: 'easy',
   },
   {
-    "category": "Computer Parts",
-    "items": [
-      "Monitor",
-      "Keyboard",
-      "Mouse",
-      "Bicycle"
-    ],
-    "impostorIndex": 3,
-    "reason": "A bicycle is not a computer part."
+    category: 'Ride Sharing Apps',
+    items: ['Uber', 'Tinder', 'Ola', 'Rapido'],
+    impostorIndex: 1,
+    reason: 'Tinder is a dating app.',
+    difficulty: 'easy',
   },
   {
-    "category": "Operating Systems",
-    "items": [
-      "Windows",
-      "macOS",
-      "Android",
-      "Google Chrome"
-    ],
-    "impostorIndex": 3,
-    "reason": "Chrome is a browser, not an operating system."
+    category: 'Food Delivery Apps',
+    items: ['Spotify', 'Zomato', 'Swiggy', 'Zepto'],
+    impostorIndex: 0,
+    reason: 'Spotify is for music streaming.',
+    difficulty: 'easy',
   },
   {
-    "category": "Video Streaming",
-    "items": [
-      "Netflix",
-      "YouTube",
-      "Hulu",
-      "Calculator"
-    ],
-    "impostorIndex": 3,
-    "reason": "Calculator is for math, the rest are for streaming videos."
+    category: 'E-commerce Sites',
+    items: ['Amazon', 'Flipkart', 'Myntra', 'WhatsApp'],
+    impostorIndex: 3,
+    reason: 'WhatsApp is a messaging app.',
+    difficulty: 'easy',
   },
   {
-    "category": "Music Apps",
-    "items": [
-      "Spotify",
-      "Apple Music",
-      "Amazon Music",
-      "Google Maps"
-    ],
-    "impostorIndex": 3,
-    "reason": "Google Maps is for navigation, not music."
+    category: 'Messaging Apps',
+    items: ['WhatsApp', 'Netflix', 'Telegram', 'Signal'],
+    impostorIndex: 1,
+    reason: 'Netflix is a video streaming service.',
+    difficulty: 'easy',
   },
   {
-    "category": "Gaming Consoles",
-    "items": [
-      "PlayStation",
-      "Xbox",
-      "Nintendo Switch",
-      "Microwave"
-    ],
-    "impostorIndex": 3,
-    "reason": "A microwave is a kitchen appliance."
+    category: 'Cloud Storage',
+    items: ['Google Drive', 'Dropbox', 'Bluetooth', 'OneDrive'],
+    impostorIndex: 2,
+    reason: 'Bluetooth is a wireless connection standard, not storage.',
+    difficulty: 'easy',
   },
   {
-    "category": "Virtual Assistants",
-    "items": [
-      "Siri",
-      "Alexa",
-      "Google Assistant",
-      "Mario"
-    ],
-    "impostorIndex": 3,
-    "reason": "Mario is a video game character."
+    category: 'AI Tools',
+    items: ['MS Paint', 'ChatGPT', 'Gemini', 'Midjourney'],
+    impostorIndex: 0,
+    reason: 'MS Paint is a basic drawing program with no AI in it.',
+    difficulty: 'easy',
   },
   {
-    "category": "Programming Languages",
-    "items": [
-      "Python",
-      "Java",
-      "C++",
-      "English"
-    ],
-    "impostorIndex": 3,
-    "reason": "English is a human language, not a programming language."
+    category: 'Video Games',
+    items: ['Minecraft', 'Fortnite', 'Chrome', 'Roblox'],
+    impostorIndex: 2,
+    reason: 'Chrome is a web browser.',
+    difficulty: 'easy',
   },
   {
-    "category": "Tech Billionaires",
-    "items": [
-      "Elon Musk",
-      "Bill Gates",
-      "Mark Zuckerberg",
-      "Gordon Ramsay"
-    ],
-    "impostorIndex": 3,
-    "reason": "Gordon Ramsay is a chef."
+    category: 'Internet Domains',
+    items: ['.com', '.org', '.exe', '.net'],
+    impostorIndex: 2,
+    reason: '.exe is a program file extension, not a domain ending.',
+    difficulty: 'easy',
   },
   {
-    "category": "Storage Devices",
-    "items": [
-      "Hard Drive",
-      "USB Flash Drive",
-      "SD Card",
-      "Speaker"
-    ],
-    "impostorIndex": 3,
-    "reason": "A speaker plays sound, it does not store files."
+    category: 'Computer Parts',
+    items: ['Motherboard', 'Graphics Card', 'Power Supply', 'Stapler'],
+    impostorIndex: 3,
+    reason: 'A stapler is stationery.',
+    difficulty: 'easy',
   },
   {
-    "category": "Output Devices",
-    "items": [
-      "Monitor",
-      "Printer",
-      "Speaker",
-      "Keyboard"
-    ],
-    "impostorIndex": 3,
-    "reason": "Keyboard is an input device."
+    category: 'Wearable Tech',
+    items: ['Apple Watch', 'Fitbit', 'Desktop PC', 'Galaxy Watch'],
+    impostorIndex: 2,
+    reason: 'A desktop PC is not something you wear.',
+    difficulty: 'easy',
   },
   {
-    "category": "Input Devices",
-    "items": [
-      "Mouse",
-      "Keyboard",
-      "Microphone",
-      "Monitor"
-    ],
-    "impostorIndex": 3,
-    "reason": "Monitor is an output device."
+    category: 'Mobile Processors',
+    items: ['Snapdragon', 'MediaTek', 'Exynos', 'Ceiling Fan'],
+    impostorIndex: 3,
+    reason: 'A ceiling fan is not a processor.',
+    difficulty: 'easy',
+  },
+
+  // --- medium: everything is tech, one is a different KIND of tech ----------
+  {
+    category: 'Web Browsers',
+    items: ['Chrome', 'Bing', 'Firefox', 'Safari'],
+    impostorIndex: 1,
+    reason: 'Bing is a search engine. You use it inside a browser.',
+    difficulty: 'medium',
   },
   {
-    "category": "File Types (Images)",
-    "items": [
-      ".jpg",
-      ".png",
-      ".gif",
-      ".mp3"
-    ],
-    "impostorIndex": 3,
-    "reason": ".mp3 is an audio file format."
+    category: 'Input Devices',
+    items: ['Mouse', 'Keyboard', 'Projector', 'Scanner'],
+    impostorIndex: 2,
+    reason: 'A projector is an output device — it shows you information.',
+    difficulty: 'medium',
   },
   {
-    "category": "File Types (Documents)",
-    "items": [
-      ".doc",
-      ".pdf",
-      ".txt",
-      ".mp4"
-    ],
-    "impostorIndex": 3,
-    "reason": ".mp4 is a video file format."
+    category: 'Output Devices',
+    items: ['Monitor', 'Printer', 'Microphone', 'Speaker'],
+    impostorIndex: 2,
+    reason: 'A microphone takes input in, the others put output out.',
+    difficulty: 'medium',
   },
   {
-    "category": "Ride Sharing Apps",
-    "items": [
-      "Uber",
-      "Lyft",
-      "Ola",
-      "Tinder"
-    ],
-    "impostorIndex": 3,
-    "reason": "Tinder is a dating app."
+    category: 'Google Products',
+    items: ['Gmail', 'Google Drive', 'Keynote', 'Google Maps'],
+    impostorIndex: 2,
+    reason: 'Keynote is a presentation app made by Apple.',
+    difficulty: 'medium',
   },
   {
-    "category": "Food Delivery Apps",
-    "items": [
-      "Zomato",
-      "Swiggy",
-      "UberEats",
-      "Spotify"
-    ],
-    "impostorIndex": 3,
-    "reason": "Spotify is for music."
+    category: 'Apple Products',
+    items: ['iPad', 'MacBook', 'Surface Pro', 'AirPods'],
+    impostorIndex: 2,
+    reason: 'The Surface Pro is made by Microsoft.',
+    difficulty: 'medium',
   },
   {
-    "category": "E-commerce Sites",
-    "items": [
-      "Amazon",
-      "Flipkart",
-      "eBay",
-      "WhatsApp"
-    ],
-    "impostorIndex": 3,
-    "reason": "WhatsApp is a messaging app."
+    category: 'Microsoft Products',
+    items: ['Windows', 'Xbox', 'Azure', 'Chromebook'],
+    impostorIndex: 3,
+    reason: 'Chromebooks run ChromeOS, made by Google.',
+    difficulty: 'medium',
   },
   {
-    "category": "Messaging Apps",
-    "items": [
-      "WhatsApp",
-      "Telegram",
-      "Signal",
-      "Netflix"
-    ],
-    "impostorIndex": 3,
-    "reason": "Netflix is a streaming app."
+    category: 'Owned by Meta',
+    items: ['Instagram', 'WhatsApp', 'Twitter', 'Facebook'],
+    impostorIndex: 2,
+    reason: 'Twitter (now X) is not owned by Meta.',
+    difficulty: 'medium',
   },
   {
-    "category": "Search Engines",
-    "items": [
-      "Google",
-      "Bing",
-      "Yahoo",
-      "Windows"
-    ],
-    "impostorIndex": 3,
-    "reason": "Windows is an operating system."
+    category: 'Mobile Operating Systems',
+    items: ['Android', 'iOS', 'Windows 11', 'HarmonyOS'],
+    impostorIndex: 2,
+    reason: 'Windows 11 is a desktop and laptop operating system.',
+    difficulty: 'medium',
   },
   {
-    "category": "Cloud Storage",
-    "items": [
-      "Google Drive",
-      "Dropbox",
-      "OneDrive",
-      "Bluetooth"
-    ],
-    "impostorIndex": 3,
-    "reason": "Bluetooth is a wireless technology."
+    category: 'Storage Devices',
+    items: ['SSD', 'Hard Disk', 'RAM', 'SD Card'],
+    impostorIndex: 2,
+    reason: 'RAM is temporary working memory — it empties when you power off.',
+    difficulty: 'medium',
   },
   {
-    "category": "Wearable Tech",
-    "items": [
-      "Apple Watch",
-      "Fitbit",
-      "Galaxy Watch",
-      "Laptop"
-    ],
-    "impostorIndex": 3,
-    "reason": "A laptop is not wearable tech."
+    category: 'Version Control',
+    items: ['Git', 'SVN', 'Docker', 'Mercurial'],
+    impostorIndex: 2,
+    reason: 'Docker packages and runs applications, it does not track code history.',
+    difficulty: 'medium',
   },
   {
-    "category": "Smart Home Devices",
-    "items": [
-      "Smart Bulb",
-      "Smart Thermostat",
-      "Smart Plug",
-      "Smart Water Bottle"
-    ],
-    "impostorIndex": 3,
-    "reason": "Smart Water Bottle is usually not considered a core smart home device."
+    category: 'Code Editors',
+    items: ['VS Code', 'Sublime Text', 'Notepad++', 'Postman'],
+    impostorIndex: 3,
+    reason: 'Postman is a tool for testing APIs, not for writing code.',
+    difficulty: 'medium',
   },
   {
-    "category": "Programming Concepts",
-    "items": [
-      "Loop",
-      "Variable",
-      "Function",
-      "Steering Wheel"
-    ],
-    "impostorIndex": 3,
-    "reason": "Steering Wheel is for cars."
+    category: 'Video Call Apps',
+    items: ['Zoom', 'Google Meet', 'Trello', 'Microsoft Teams'],
+    impostorIndex: 2,
+    reason: 'Trello is a task and project board.',
+    difficulty: 'medium',
   },
   {
-    "category": "Network Terms",
-    "items": [
-      "Wi-Fi",
-      "Ethernet",
-      "Router",
-      "Monitor"
-    ],
-    "impostorIndex": 3,
-    "reason": "Monitor is a display device."
+    category: 'Cloud Platforms',
+    items: ['AWS', 'Azure', 'GitHub', 'Google Cloud'],
+    impostorIndex: 2,
+    reason: 'GitHub hosts code repositories, it is not a cloud computing platform.',
+    difficulty: 'medium',
   },
   {
-    "category": "Computer Brands",
-    "items": [
-      "Dell",
-      "HP",
-      "Lenovo",
-      "Nike"
-    ],
-    "impostorIndex": 3,
-    "reason": "Nike makes shoes."
+    category: 'Linux Distributions',
+    items: ['Ubuntu', 'Fedora', 'FreeBSD', 'Debian'],
+    impostorIndex: 2,
+    reason: 'FreeBSD is a BSD system, it does not use the Linux kernel.',
+    difficulty: 'medium',
   },
   {
-    "category": "Antivirus Software",
-    "items": [
-      "Norton",
-      "McAfee",
-      "Kaspersky",
-      "Adobe Premiere"
-    ],
-    "impostorIndex": 3,
-    "reason": "Adobe Premiere is for video editing."
+    category: 'Wireless Technologies',
+    items: ['Bluetooth', 'Wi-Fi', 'Ethernet', 'NFC'],
+    impostorIndex: 2,
+    reason: 'Ethernet is a wired connection.',
+    difficulty: 'medium',
   },
   {
-    "category": "Video Editing Software",
-    "items": [
-      "Premiere Pro",
-      "Final Cut Pro",
-      "DaVinci Resolve",
-      "Microsoft Word"
-    ],
-    "impostorIndex": 3,
-    "reason": "Word is for text documents."
+    category: 'Web Technologies',
+    items: ['HTML', 'CSS', 'JavaScript', 'MySQL'],
+    impostorIndex: 3,
+    reason: 'MySQL is a database that runs on the server, not in the browser.',
+    difficulty: 'medium',
   },
   {
-    "category": "Photo Editing Apps",
-    "items": [
-      "Photoshop",
-      "Lightroom",
-      "Snapseed",
-      "Excel"
-    ],
-    "impostorIndex": 3,
-    "reason": "Excel is a spreadsheet app."
+    category: 'Antivirus Software',
+    items: ['Norton', 'Adobe Premiere', 'McAfee', 'Kaspersky'],
+    impostorIndex: 1,
+    reason: 'Adobe Premiere is video editing software.',
+    difficulty: 'medium',
   },
   {
-    "category": "Spreadsheet Apps",
-    "items": [
-      "Excel",
-      "Google Sheets",
-      "Numbers",
-      "TikTok"
-    ],
-    "impostorIndex": 3,
-    "reason": "TikTok is a video app."
+    category: 'Search Engines',
+    items: ['Google', 'DuckDuckGo', 'Windows', 'Bing'],
+    impostorIndex: 2,
+    reason: 'Windows is an operating system.',
+    difficulty: 'medium',
+  },
+
+  // --- hard: all four are tech, the difference is a real concept -----------
+  {
+    category: 'Programming Languages',
+    items: ['Python', 'Ruby', 'HTML', 'Perl'],
+    impostorIndex: 2,
+    reason: 'HTML is a markup language — it describes structure, it cannot compute.',
+    difficulty: 'hard',
   },
   {
-    "category": "Presentation Apps",
-    "items": [
-      "PowerPoint",
-      "Google Slides",
-      "Keynote",
-      "Snapchat"
-    ],
-    "impostorIndex": 3,
-    "reason": "Snapchat is a messaging app."
+    category: 'Frontend Frameworks',
+    items: ['React', 'Angular', 'Django', 'Vue'],
+    impostorIndex: 2,
+    reason: 'Django is a backend framework, and it is Python not JavaScript.',
+    difficulty: 'hard',
   },
   {
-    "category": "Coding Editors",
-    "items": [
-      "VS Code",
-      "Sublime Text",
-      "Notepad++",
-      "Spotify"
-    ],
-    "impostorIndex": 3,
-    "reason": "Spotify is for music."
+    category: 'NoSQL Databases',
+    items: ['MongoDB', 'PostgreSQL', 'Cassandra', 'Redis'],
+    impostorIndex: 1,
+    reason: 'PostgreSQL is a relational SQL database.',
+    difficulty: 'hard',
   },
   {
-    "category": "Tech Events",
-    "items": [
-      "Google I/O",
-      "Apple WWDC",
-      "CES",
-      "Super Bowl"
-    ],
-    "impostorIndex": 3,
-    "reason": "Super Bowl is a sports event."
+    category: 'AWS Services',
+    items: ['S3', 'EC2', 'Firestore', 'Lambda'],
+    impostorIndex: 2,
+    reason: 'Firestore is a Google Cloud (Firebase) database.',
+    difficulty: 'hard',
   },
   {
-    "category": "Video Games",
-    "items": [
-      "Minecraft",
-      "Fortnite",
-      "Roblox",
-      "Chrome"
-    ],
-    "impostorIndex": 3,
-    "reason": "Chrome is a web browser."
+    category: 'CSS Frameworks',
+    items: ['Tailwind', 'Bootstrap', 'jQuery', 'Bulma'],
+    impostorIndex: 2,
+    reason: 'jQuery is a JavaScript library, not a styling framework.',
+    difficulty: 'hard',
   },
   {
-    "category": "Game Developers",
-    "items": [
-      "EA",
-      "Ubisoft",
-      "Nintendo",
-      "KFC"
-    ],
-    "impostorIndex": 3,
-    "reason": "KFC sells fried chicken."
+    category: 'Package Managers',
+    items: ['npm', 'pip', 'Jenkins', 'Maven'],
+    impostorIndex: 2,
+    reason: 'Jenkins is a CI server that runs builds, it does not install packages.',
+    difficulty: 'hard',
   },
   {
-    "category": "Tech YouTubers",
-    "items": [
-      "MKBHD",
-      "Linus Tech Tips",
-      "Mrwhosetheboss",
-      "Gordon Ramsay"
-    ],
-    "impostorIndex": 3,
-    "reason": "Gordon Ramsay is a chef."
+    category: 'Compiled Languages',
+    items: ['C', 'Go', 'JavaScript', 'Rust'],
+    impostorIndex: 2,
+    reason: 'JavaScript is interpreted at runtime rather than compiled ahead of time.',
+    difficulty: 'hard',
   },
   {
-    "category": "Mobile Processors",
-    "items": [
-      "Snapdragon",
-      "Apple A-Series",
-      "Exynos",
-      "Intel Core i9"
-    ],
-    "impostorIndex": 3,
-    "reason": "Intel Core i9 is a desktop/laptop processor."
+    category: 'Sorting Algorithms',
+    items: ['Merge Sort', 'Quick Sort', 'Binary Search', 'Bubble Sort'],
+    impostorIndex: 2,
+    reason: 'Binary Search finds an item, it does not sort anything.',
+    difficulty: 'hard',
   },
   {
-    "category": "Wireless Tech",
-    "items": [
-      "Bluetooth",
-      "Wi-Fi",
-      "NFC",
-      "USB Cable"
-    ],
-    "impostorIndex": 3,
-    "reason": "USB Cable is a wired technology."
+    category: 'OOP Concepts',
+    items: ['Inheritance', 'Encapsulation', 'Recursion', 'Polymorphism'],
+    impostorIndex: 2,
+    reason: 'Recursion is a general technique, not one of the OOP pillars.',
+    difficulty: 'hard',
   },
   {
-    "category": "Computer Keys",
-    "items": [
-      "Shift",
-      "Enter",
-      "Spacebar",
-      "Screen"
-    ],
-    "impostorIndex": 3,
-    "reason": "Screen is not a keyboard key."
+    category: 'HTTP Methods',
+    items: ['GET', 'POST', 'PUSH', 'DELETE'],
+    impostorIndex: 2,
+    reason: 'PUSH is not an HTTP method. You are thinking of PUT.',
+    difficulty: 'hard',
   },
   {
-    "category": "Email Providers",
-    "items": [
-      "Gmail",
-      "Outlook",
-      "Yahoo Mail",
-      "Twitter"
-    ],
-    "impostorIndex": 3,
-    "reason": "Twitter is a social media site."
+    category: 'Data Structures',
+    items: ['Stack', 'Queue', 'Quick Sort', 'Linked List'],
+    impostorIndex: 2,
+    reason: 'Quick Sort is an algorithm that runs on data structures.',
+    difficulty: 'hard',
   },
   {
-    "category": "Tech Buzzwords",
-    "items": [
-      "Metaverse",
-      "Web3",
-      "Blockchain",
-      "Sandwich"
-    ],
-    "impostorIndex": 3,
-    "reason": "A sandwich is food."
+    category: 'Statically Typed Languages',
+    items: ['Java', 'C++', 'Python', 'TypeScript'],
+    impostorIndex: 2,
+    reason: 'Python is dynamically typed — types are checked while it runs.',
+    difficulty: 'hard',
   },
   {
-    "category": "Internet Domains",
-    "items": [
-      ".com",
-      ".org",
-      ".net",
-      ".exe"
-    ],
-    "impostorIndex": 3,
-    "reason": ".exe is an executable file extension."
+    category: 'Google Cloud Services',
+    items: ['BigQuery', 'Cloud Run', 'DynamoDB', 'Firestore'],
+    impostorIndex: 2,
+    reason: 'DynamoDB is Amazon\'s database.',
+    difficulty: 'hard',
   },
   {
-    "category": "Tech Podcasts",
-    "items": [
-      "Waveform",
-      "Lex Fridman",
-      "Reply All",
-      "Vogue"
-    ],
-    "impostorIndex": 3,
-    "reason": "Vogue is a fashion magazine."
+    category: 'Code Hosting Platforms',
+    items: ['GitHub', 'GitLab', 'Docker Hub', 'Bitbucket'],
+    impostorIndex: 2,
+    reason: 'Docker Hub stores container images, not source code repositories.',
+    difficulty: 'hard',
   },
   {
-    "category": "AI Tools",
-    "items": [
-      "ChatGPT",
-      "Gemini",
-      "Midjourney",
-      "Paint"
-    ],
-    "impostorIndex": 3,
-    "reason": "Paint is a basic drawing app, not AI."
+    category: 'JavaScript Runtimes',
+    items: ['Node.js', 'Deno', 'Flask', 'Bun'],
+    impostorIndex: 2,
+    reason: 'Flask is a Python web framework.',
+    difficulty: 'hard',
   },
-  {
-    "category": "Streaming Devices",
-    "items": [
-      "Chromecast",
-      "Apple TV",
-      "Roku",
-      "Toaster"
-    ],
-    "impostorIndex": 3,
-    "reason": "A toaster makes toast."
-  },
-  {
-    "category": "Smart Speakers",
-    "items": [
-      "Amazon Echo",
-      "Google Nest",
-      "Apple HomePod",
-      "Mousepad"
-    ],
-    "impostorIndex": 3,
-    "reason": "A mousepad is a surface for a mouse."
-  },
-  {
-    "category": "Audio Brands",
-    "items": [
-      "Sony",
-      "Bose",
-      "Sennheiser",
-      "Intel"
-    ],
-    "impostorIndex": 3,
-    "reason": "Intel is known for computer chips, not audio."
-  },
-  {
-    "category": "Keyboard Types",
-    "items": [
-      "Mechanical",
-      "Membrane",
-      "Virtual",
-      "Liquid"
-    ],
-    "impostorIndex": 3,
-    "reason": "Liquid is not a type of keyboard."
-  }
 ];

@@ -1,602 +1,106 @@
+// Tech Recall word bank.
+//
+// This is a MEMORY test, not a knowledge test - a player does not need to know
+// what "Polymorphism" means, only to hold it for a few seconds and retype it.
+// So difficulty is driven by length and how predictable the letters are, which
+// is also what the flash timer scales on.
+//
+//   easy    5-7 chars,  everyday tech words
+//   medium  8-11 chars, familiar but longer
+//   hard    12+ chars,  long or awkward to spell
+//
+// Every game draws a fixed mix (see TechRecall.jsx), so no player gets a lucky
+// run of short words while the next one gets a wall of long ones.
+
 export const TECH_RECALL_WORDS = [
-  {
-    "word": "Laptop"
-  },
-  {
-    "word": "Mouse"
-  },
-  {
-    "word": "Keyboard"
-  },
-  {
-    "word": "Monitor"
-  },
-  {
-    "word": "Screen"
-  },
-  {
-    "word": "Phone"
-  },
-  {
-    "word": "Tablet"
-  },
-  {
-    "word": "Camera"
-  },
-  {
-    "word": "Drone"
-  },
-  {
-    "word": "Robot"
-  },
-  {
-    "word": "Wi-Fi"
-  },
-  {
-    "word": "Internet"
-  },
-  {
-    "word": "Website"
-  },
-  {
-    "word": "Email"
-  },
-  {
-    "word": "Google"
-  },
-  {
-    "word": "Apple"
-  },
-  {
-    "word": "Microsoft"
-  },
-  {
-    "word": "Amazon"
-  },
-  {
-    "word": "Facebook"
-  },
-  {
-    "word": "Twitter"
-  },
-  {
-    "word": "Code"
-  },
-  {
-    "word": "Data"
-  },
-  {
-    "word": "Cloud"
-  },
-  {
-    "word": "Server"
-  },
-  {
-    "word": "Network"
-  },
-  {
-    "word": "Router"
-  },
-  {
-    "word": "Modem"
-  },
-  {
-    "word": "Pixel"
-  },
-  {
-    "word": "Video"
-  },
-  {
-    "word": "Audio"
-  },
-  {
-    "word": "Music"
-  },
-  {
-    "word": "Photo"
-  },
-  {
-    "word": "App"
-  },
-  {
-    "word": "Game"
-  },
-  {
-    "word": "Chat"
-  },
-  {
-    "word": "Text"
-  },
-  {
-    "word": "Call"
-  },
-  {
-    "word": "Search"
-  },
-  {
-    "word": "Link"
-  },
-  {
-    "word": "Web"
-  },
-  {
-    "word": "Browser"
-  },
-  {
-    "word": "Chrome"
-  },
-  {
-    "word": "Safari"
-  },
-  {
-    "word": "Firefox"
-  },
-  {
-    "word": "Window"
-  },
-  {
-    "word": "Mac"
-  },
-  {
-    "word": "Linux"
-  },
-  {
-    "word": "Android"
-  },
-  {
-    "word": "iOS"
-  },
-  {
-    "word": "Smart"
-  },
-  {
-    "word": "Watch"
-  },
-  {
-    "word": "Band"
-  },
-  {
-    "word": "Speaker"
-  },
-  {
-    "word": "Headset"
-  },
-  {
-    "word": "Earbuds"
-  },
-  {
-    "word": "Battery"
-  },
-  {
-    "word": "Charger"
-  },
-  {
-    "word": "Cable"
-  },
-  {
-    "word": "Port"
-  },
-  {
-    "word": "Drive"
-  },
-  {
-    "word": "Disk"
-  },
-  {
-    "word": "Flash"
-  },
-  {
-    "word": "Memory"
-  },
-  {
-    "word": "RAM"
-  },
-  {
-    "word": "Chip"
-  },
-  {
-    "word": "Processor"
-  },
-  {
-    "word": "Card"
-  },
-  {
-    "word": "Board"
-  },
-  {
-    "word": "System"
-  },
-  {
-    "word": "Software"
-  },
-  {
-    "word": "Update"
-  },
-  {
-    "word": "Install"
-  },
-  {
-    "word": "Delete"
-  },
-  {
-    "word": "Save"
-  },
-  {
-    "word": "Copy"
-  },
-  {
-    "word": "Paste"
-  },
-  {
-    "word": "Print"
-  },
-  {
-    "word": "Scan"
-  },
-  {
-    "word": "Click"
-  },
-  {
-    "word": "Type"
-  },
-  {
-    "word": "Swipe"
-  },
-  {
-    "word": "Tap"
-  },
-  {
-    "word": "Scroll"
-  },
-  {
-    "word": "Zoom"
-  },
-  {
-    "word": "Play"
-  },
-  {
-    "word": "Pause"
-  },
-  {
-    "word": "Stop"
-  },
-  {
-    "word": "Record"
-  },
-  {
-    "word": "Share"
-  },
-  {
-    "word": "Send"
-  },
-  {
-    "word": "Upload"
-  },
-  {
-    "word": "Download"
-  },
-  {
-    "word": "Stream"
-  },
-  {
-    "word": "Live"
-  },
-  {
-    "word": "Post"
-  },
-  {
-    "word": "Like"
-  },
-  {
-    "word": "Comment"
-  },
-  {
-    "word": "Follow"
-  },
-  {
-    "word": "Friend"
-  },
-  {
-    "word": "User"
-  },
-  {
-    "word": "Profile"
-  },
-  {
-    "word": "Account"
-  },
-  {
-    "word": "Password"
-  },
-  {
-    "word": "Login"
-  },
-  {
-    "word": "Logout"
-  },
-  {
-    "word": "Secure"
-  },
-  {
-    "word": "Lock"
-  },
-  {
-    "word": "Key"
-  },
-  {
-    "word": "Safe"
-  },
-  {
-    "word": "Alert"
-  },
-  {
-    "word": "Virus"
-  },
-  {
-    "word": "Bug"
-  },
-  {
-    "word": "Error"
-  },
-  {
-    "word": "Crash"
-  },
-  {
-    "word": "Fix"
-  },
-  {
-    "word": "Repair"
-  },
-  {
-    "word": "Help"
-  },
-  {
-    "word": "Support"
-  },
-  {
-    "word": "Guide"
-  },
-  {
-    "word": "Manual"
-  },
-  {
-    "word": "Tool"
-  },
-  {
-    "word": "Gear"
-  },
-  {
-    "word": "Tech"
-  },
-  {
-    "word": "Digital"
-  },
-  {
-    "word": "Cyber"
-  },
-  {
-    "word": "Virtual"
-  },
-  {
-    "word": "Real"
-  },
-  {
-    "word": "Fake"
-  },
-  {
-    "word": "Bot"
-  },
-  {
-    "word": "AI"
-  },
-  {
-    "word": "Smart"
-  },
-  {
-    "word": "Fast"
-  },
-  {
-    "word": "Slow"
-  },
-  {
-    "word": "Quick"
-  },
-  {
-    "word": "Easy"
-  },
-  {
-    "word": "Hard"
-  },
-  {
-    "word": "Simple"
-  },
-  {
-    "word": "Complex"
-  },
-  {
-    "word": "Basic"
-  },
-  {
-    "word": "Pro"
-  },
-  {
-    "word": "Free"
-  },
-  {
-    "word": "Paid"
-  },
-  {
-    "word": "Buy"
-  },
-  {
-    "word": "Sell"
-  },
-  {
-    "word": "Shop"
-  },
-  {
-    "word": "Store"
-  },
-  {
-    "word": "Cart"
-  },
-  {
-    "word": "Pay"
-  },
-  {
-    "word": "Card"
-  },
-  {
-    "word": "Cash"
-  },
-  {
-    "word": "Bank"
-  },
-  {
-    "word": "Money"
-  },
-  {
-    "word": "Coin"
-  },
-  {
-    "word": "Token"
-  },
-  {
-    "word": "Crypto"
-  },
-  {
-    "word": "Bitcoin"
-  },
-  {
-    "word": "Wallet"
-  },
-  {
-    "word": "Chain"
-  },
-  {
-    "word": "Block"
-  },
-  {
-    "word": "Node"
-  },
-  {
-    "word": "Link"
-  },
-  {
-    "word": "Host"
-  },
-  {
-    "word": "Domain"
-  },
-  {
-    "word": "Site"
-  },
-  {
-    "word": "Page"
-  },
-  {
-    "word": "Blog"
-  },
-  {
-    "word": "Vlog"
-  },
-  {
-    "word": "News"
-  },
-  {
-    "word": "Feed"
-  },
-  {
-    "word": "Stream"
-  },
-  {
-    "word": "Cast"
-  },
-  {
-    "word": "Show"
-  },
-  {
-    "word": "Movie"
-  },
-  {
-    "word": "Film"
-  },
-  {
-    "word": "Clip"
-  },
-  {
-    "word": "Short"
-  },
-  {
-    "word": "Reel"
-  },
-  {
-    "word": "Story"
-  },
-  {
-    "word": "Post"
-  },
-  {
-    "word": "Draft"
-  },
-  {
-    "word": "Edit"
-  },
-  {
-    "word": "Filter"
-  },
-  {
-    "word": "Crop"
-  },
-  {
-    "word": "Cut"
-  },
-  {
-    "word": "Join"
-  },
-  {
-    "word": "Merge"
-  },
-  {
-    "word": "Split"
-  },
-  {
-    "word": "Mix"
-  },
-  {
-    "word": "Blend"
-  },
-  {
-    "word": "Color"
-  },
-  {
-    "word": "Light"
-  },
-  {
-    "word": "Dark"
-  },
-  {
-    "word": "Mode"
-  },
-  {
-    "word": "Theme"
-  },
-  {
-    "word": "Style"
-  },
-  {
-    "word": "Font"
-  },
-  {
-    "word": "Text"
-  },
-  {
-    "word": "Word"
-  },
-  {
-    "word": "Letter"
-  },
-  {
-    "word": "Number"
-  }
+  // --- easy -----------------------------------------------------------------
+  { word: 'Python', difficulty: 'easy' },
+  { word: 'GitHub', difficulty: 'easy' },
+  { word: 'Chrome', difficulty: 'easy' },
+  { word: 'Server', difficulty: 'easy' },
+  { word: 'Binary', difficulty: 'easy' },
+  { word: 'Kernel', difficulty: 'easy' },
+  { word: 'Cookie', difficulty: 'easy' },
+  { word: 'Router', difficulty: 'easy' },
+  { word: 'Pixels', difficulty: 'easy' },
+  { word: 'Docker', difficulty: 'easy' },
+  { word: 'Laptop', difficulty: 'easy' },
+  { word: 'Widget', difficulty: 'easy' },
+  { word: 'Buffer', difficulty: 'easy' },
+  { word: 'Syntax', difficulty: 'easy' },
+  { word: 'Vector', difficulty: 'easy' },
+  { word: 'Backup', difficulty: 'easy' },
+  { word: 'Domain', difficulty: 'easy' },
+  { word: 'Kotlin', difficulty: 'easy' },
+  { word: 'Applet', difficulty: 'easy' },
+  { word: 'Bitmap', difficulty: 'easy' },
+  { word: 'Cursor', difficulty: 'easy' },
+  { word: 'Nvidia', difficulty: 'easy' },
+  { word: 'Ubuntu', difficulty: 'easy' },
+  { word: 'Gadget', difficulty: 'easy' },
+  { word: 'Modem', difficulty: 'easy' },
+  { word: 'Cache', difficulty: 'easy' },
+  { word: 'Linux', difficulty: 'easy' },
+  { word: 'Array', difficulty: 'easy' },
+  { word: 'Debug', difficulty: 'easy' },
+  { word: 'Pixel', difficulty: 'easy' },
+
+  // --- medium ---------------------------------------------------------------
+  { word: 'Firebase', difficulty: 'medium' },
+  { word: 'Compiler', difficulty: 'medium' },
+  { word: 'Database', difficulty: 'medium' },
+  { word: 'Protocol', difficulty: 'medium' },
+  { word: 'Metadata', difficulty: 'medium' },
+  { word: 'Firewall', difficulty: 'medium' },
+  { word: 'Encoding', difficulty: 'medium' },
+  { word: 'Function', difficulty: 'medium' },
+  { word: 'Iterator', difficulty: 'medium' },
+  { word: 'Debugger', difficulty: 'medium' },
+  { word: 'Runtime', difficulty: 'medium' },
+  { word: 'Package', difficulty: 'medium' },
+  { word: 'Bandwidth', difficulty: 'medium' },
+  { word: 'Algorithm', difficulty: 'medium' },
+  { word: 'Framework', difficulty: 'medium' },
+  { word: 'Interface', difficulty: 'medium' },
+  { word: 'Recursion', difficulty: 'medium' },
+  { word: 'Bootstrap', difficulty: 'medium' },
+  { word: 'Encrypted', difficulty: 'medium' },
+  { word: 'Localhost', difficulty: 'medium' },
+  { word: 'Namespace', difficulty: 'medium' },
+  { word: 'Refactor', difficulty: 'medium' },
+  { word: 'Container', difficulty: 'medium' },
+  { word: 'JavaScript', difficulty: 'medium' },
+  { word: 'Kubernetes', difficulty: 'medium' },
+  { word: 'Middleware', difficulty: 'medium' },
+  { word: 'Repository', difficulty: 'medium' },
+  { word: 'Encryption', difficulty: 'medium' },
+  { word: 'Blockchain', difficulty: 'medium' },
+  { word: 'Serverless', difficulty: 'medium' },
+
+  // --- hard -----------------------------------------------------------------
+  { word: 'Polymorphism', difficulty: 'hard' },
+  { word: 'Inheritance', difficulty: 'hard' },
+  { word: 'Concurrency', difficulty: 'hard' },
+  { word: 'Abstraction', difficulty: 'hard' },
+  { word: 'Persistence', difficulty: 'hard' },
+  { word: 'Cryptography', difficulty: 'hard' },
+  { word: 'Asynchronous', difficulty: 'hard' },
+  { word: 'Architecture', difficulty: 'hard' },
+  { word: 'Optimization', difficulty: 'hard' },
+  { word: 'Compression', difficulty: 'hard' },
+  { word: 'Deployment', difficulty: 'hard' },
+  { word: 'Virtualization', difficulty: 'hard' },
+  { word: 'Authentication', difficulty: 'hard' },
+  { word: 'Authorization', difficulty: 'hard' },
+  { word: 'Encapsulation', difficulty: 'hard' },
+  { word: 'Normalization', difficulty: 'hard' },
+  { word: 'Microservices', difficulty: 'hard' },
+  { word: 'Cybersecurity', difficulty: 'hard' },
+  { word: 'Interpolation', difficulty: 'hard' },
+  { word: 'Multithreading', difficulty: 'hard' },
+  { word: 'Backpropagation', difficulty: 'hard' },
+  { word: 'Instantiation', difficulty: 'hard' },
+  { word: 'Synchronization', difficulty: 'hard' },
+  { word: 'Interoperability', difficulty: 'hard' },
+  { word: 'Decentralization', difficulty: 'hard' },
 ];
