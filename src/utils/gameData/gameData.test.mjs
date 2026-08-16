@@ -2,7 +2,7 @@
 // Validates the question banks against what the games actually draw, so a
 // malformed or too-thin bank fails here rather than in front of a queue.
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -108,9 +108,18 @@ const requireDepth = (name, pool, profile, factor = 3) => {
   for (const i of pool) {
     assert.ok(i.src?.startsWith('/game-images/'), `must be served locally: ${i.id}`);
     assert.equal(typeof i.isAI, 'boolean', `isAI must be boolean: ${i.id}`);
+    assert.ok(i.subject?.length >= 8, `subject label missing: ${i.id}`);
     // Serving these from our own origin is the whole point - a missing file
     // would show a broken box to a player at the stall.
-    assert.ok(existsSync(join(publicDir, i.src)), `image not downloaded: ${i.src}`);
+    const file = join(publicDir, i.src);
+    assert.ok(existsSync(file), `image not downloaded: ${i.src}`);
+    assert.ok(statSync(file).size <= 160 * 1024, `AI Eye image too heavy: ${i.src}`);
+  }
+  const realSubjects = realSet.map((i) => i.subject.toLowerCase()).join(' ');
+  const aiSubjects = aiSet.map((i) => i.subject.toLowerCase()).join(' ');
+  for (const anchor of ['coast', 'mountain', 'building', 'boat']) {
+    assert.ok(realSubjects.includes(anchor), `real set missing ${anchor}-like subject`);
+    assert.ok(aiSubjects.includes(anchor), `AI set missing ${anchor}-like subject`);
   }
 }
 
@@ -127,7 +136,9 @@ const requireDepth = (name, pool, profile, factor = 3) => {
     );
     assert.ok(TIERS.includes(c.difficulty), `bad difficulty: ${c.id}`);
     assert.ok(c.src?.startsWith('/game-images/'), `must be served locally: ${c.id}`);
-    assert.ok(existsSync(join(publicDir, c.src)), `image not downloaded: ${c.src}`);
+    const file = join(publicDir, c.src);
+    assert.ok(existsSync(file), `image not downloaded: ${c.src}`);
+    assert.ok(statSync(file).size <= 160 * 1024, `Prompt Wars image too heavy: ${c.src}`);
     // A player who types the prompt back verbatim must score full marks.
     assert.equal(promptSimilarity(c.prompt, c.prompt), 1, `not self-consistent: ${c.prompt}`);
   }

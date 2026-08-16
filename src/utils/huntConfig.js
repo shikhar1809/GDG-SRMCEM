@@ -13,6 +13,8 @@
 export const NORMAL_LEVELS = 9;
 export const MEGA_LEVEL = 10;
 export const TOTAL_LEVELS = MEGA_LEVEL;
+export const NORMAL_LEVEL_POINTS = 75;
+export const MEGA_LEVEL_POINTS = 150;
 
 export const ALL_LEVELS = Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1);
 export const isMegaLevel = (level) => Number(level) === MEGA_LEVEL;
@@ -35,8 +37,14 @@ export const PATH_NODES = [
 export const claimedNormalCount = (claims) =>
   ALL_LEVELS.filter((l) => !isMegaLevel(l) && claims[l]).length;
 
+export const mysteryHuntPointsForLevels = (levels) =>
+  levels.reduce(
+    (total, level) => total + (isMegaLevel(level) ? MEGA_LEVEL_POINTS : NORMAL_LEVEL_POINTS),
+    0
+  );
+
 /** The mega level only opens once every normal level has a winner. */
-export const isMegaUnlocked = (claims) => claimedNormalCount(claims) >= NORMAL_LEVELS;
+export const isMegaUnlocked = (claims, override = false) => override || claimedNormalCount(claims) >= NORMAL_LEVELS;
 
 /**
  * What a given player should see for a level.
@@ -45,10 +53,10 @@ export const isMegaUnlocked = (claims) => claimedNormalCount(claims) >= NORMAL_L
  *   'open'     - up for grabs; show the hint and a code box
  *   'locked'   - mega level, not all 9 claimed yet; hint hidden
  */
-export const levelStatus = (level, claims, uid) => {
+export const levelStatus = (level, claims, uid, teamId, forceMegaUnlock = false) => {
   const claim = claims[level];
-  if (claim) return claim.uid === uid ? 'won' : 'taken';
-  if (isMegaLevel(level) && !isMegaUnlocked(claims)) return 'locked';
+  if (claim) return (claim.teamId && teamId && claim.teamId === teamId) || claim.uid === uid ? 'won' : 'taken';
+  if (isMegaLevel(level) && !isMegaUnlocked(claims, forceMegaUnlock)) return 'locked';
   return 'open';
 };
 

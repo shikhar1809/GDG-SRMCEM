@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/utils/scoring.test.mjs && node src/utils/huntConfig.test.mjs && node src/utils/gameData/gameData.test.mjs",
+    "test": "node src/utils/scoring.test.mjs && node src/utils/huntConfig.test.mjs && node src/utils/gameData/gameData.test.mjs && node src/utils/gameRequests.test.mjs",
     "simulate": "node scripts/simulateArcade.mjs",
     "fetch-images": "node scripts/fetchGameImages.mjs",
     "playtest": "vite build --config vite.playtest.config.js && vite preview --outDir dist-playtest --port 4173 & sleep 4 && node scripts/playtest.mjs && node scripts/huntPlaytest.mjs"
@@ -22,15 +22,15 @@
     "vite": "^8.2.0"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
     "firebase": "^12.17.0",
     "framer-motion": "^13.1.0",
     "gsap": "^3.15.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-icons": "^5.7.0",
-    "react-router-dom": "^7.18.2",
-    "tailwind-merge": "^3.6.0"
+    "react-router-dom": "^7.18.2"
   }
 }

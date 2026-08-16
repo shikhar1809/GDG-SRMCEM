@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { auth, googleProvider } from '../firebase';
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect } from 'firebase/auth';
+import { getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect } from 'firebase/auth';
+import { flushPendingArcadeScores } from '../utils/updateArcadeScore';
 
 export default function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
@@ -9,6 +9,11 @@ export default function ProtectedRoute({ children }) {
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
+    getRedirectResult(auth).catch((error) => {
+      console.error('Redirect auth error:', error);
+      setAuthError(error.message);
+    });
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -16,6 +21,20 @@ export default function ProtectedRoute({ children }) {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    const retryPendingScores = () => {
+      if (navigator.onLine !== false) flushPendingArcadeScores(user.uid);
+    };
+    retryPendingScores();
+    window.addEventListener('online', retryPendingScores);
+    window.addEventListener('focus', retryPendingScores);
+    return () => {
+      window.removeEventListener('online', retryPendingScores);
+      window.removeEventListener('focus', retryPendingScores);
+    };
+  }, [user]);
 
   const handleSignIn = async () => {
     setAuthError(null);
@@ -48,8 +67,14 @@ export default function ProtectedRoute({ children }) {
         <p className="text-gray-400 mb-8 max-w-md">
           Sign in with your Google account to enter the GDG Arcade and play awesome tech games!
         </p>
+        {navigator.onLine === false && (
+          <div className="mb-6 max-w-md rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
+            You seem to be offline. Connect to the internet before signing in.
+          </div>
+        )}
         <button 
           onClick={handleSignIn}
+          disabled={navigator.onLine === false}
           className="bg-white text-gray-900 px-6 py-3 rounded-full font-bold flex items-center gap-3 hover:bg-gray-100 transition-colors"
         >
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
@@ -58,7 +83,7 @@ export default function ProtectedRoute({ children }) {
         {authError && (
           <div className="mt-6 bg-red-900/80 border-2 border-red-500 text-white px-6 py-4 rounded-xl max-w-lg text-left shadow-lg flex flex-col items-start gap-3">
             <div>
-              <p className="font-bold text-lg mb-2 flex items-center gap-2">⚠️ Authentication Error</p>
+              <p className="font-bold text-lg mb-2 flex items-center gap-2">Authentication Error</p>
               <p className="text-sm opacity-90 mb-2">{authError}</p>
               {authError.includes('unauthorized') && (
                 <div className="mt-3 bg-black/30 p-3 rounded-lg text-sm">

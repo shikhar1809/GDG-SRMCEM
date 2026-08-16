@@ -1,18 +1,24 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { auth } from '../firebase';
-import { signOut } from 'firebase/auth';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
 
 export default function AppOverlay() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [toast, setToast] = useState(null);
+  const [isOffline, setIsOffline] = useState(() => navigator.onLine === false);
+  const [pendingScore, setPendingScore] = useState(false);
 
   useEffect(() => {
-    // Timer removed, handled by IdleLogout.jsx
-  }, [location.pathname]);
+    const handleOnline = () => {
+      setIsOffline(false);
+      setPendingScore(false);
+    };
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Toast listener for Points added
   useEffect(() => {
@@ -26,25 +32,34 @@ export default function AppOverlay() {
     return () => window.removeEventListener('arcadeScoreAdded', handleScoreAdded);
   }, []);
 
+  useEffect(() => {
+    const handlePending = () => setPendingScore(true);
+    window.addEventListener('arcadeScorePending', handlePending);
+    return () => window.removeEventListener('arcadeScorePending', handlePending);
+  }, []);
+
   return (
-    <AnimatePresence>
-      {toast && (
-        <motion.div
-          key={toast.id}
-          initial={{ opacity: 0, y: -50, scale: 0.5 }}
-          animate={{ opacity: 1, y: 50, scale: 1 }}
-          exit={{ opacity: 0, y: -50, scale: 0.5 }}
-          className="fixed top-0 left-0 right-0 z-[9999] flex justify-center pointer-events-none"
-        >
-          <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border-4 border-yellow-300 mt-4">
-            <Trophy className="w-8 h-8 text-yellow-100 animate-bounce" />
+    <>
+      {(isOffline || pendingScore) && (
+        <div className="fixed bottom-4 left-4 right-4 z-[9999] flex justify-center pointer-events-none">
+          <div className="max-w-xl rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm font-bold text-yellow-900 shadow-lg">
+            {isOffline
+              ? 'Network is offline. Do not close the game until it reconnects.'
+              : 'Score save is pending. Keep this tab open; it will retry automatically.'}
+          </div>
+        </div>
+      )}
+      {toast ? (
+        <div className="fixed top-12 left-0 right-0 z-[9999] flex justify-center pointer-events-none">
+          <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border-4 border-yellow-300 animate-bounce">
+            <Trophy className="w-8 h-8 text-yellow-100" />
             <div>
               <p className="font-black text-2xl">+{toast.points} Points!</p>
               <p className="font-bold text-yellow-100 text-sm">Added to Global Leaderboard</p>
             </div>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+      ) : null}
+    </>
   );
 }

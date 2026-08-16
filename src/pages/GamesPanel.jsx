@@ -4,16 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
-import { ChevronLeft, LogOut, Search, Zap, Brain, Eye, Keyboard, Lock, MapPin, Ghost, Trophy, X } from 'lucide-react';
-
-
+import { Award, ChevronLeft, LogOut, Search, Zap, Brain, Eye, Keyboard, Ghost, Trophy, X } from 'lucide-react';
 
 const GAMES = [
   {
     id: 'tech-recall',
     title: 'TECH-RECALL',
-    subtitle: 'Write Get Word',
-    description: 'A tech word flashes for ~2 seconds. Remember it and type it back. 8 rounds, 15s each.',
+    subtitle: 'Guess the Tech Word',
+    description: 'Read the hint, decode the blanks, type the word. 8 rounds, 60s each. Letters reveal over time — but hints cost you points!',
     icon: Keyboard,
     color: '#4285F4',
     bgLight: 'bg-[#e8f0fe]',
@@ -46,7 +44,7 @@ const GAMES = [
     id: 'guess-impostor',
     title: 'GUESS THE IMPOSTOR',
     subtitle: 'Find the odd one out',
-    description: "Spot the odd one out. 6 rounds, 15s each. No negative marking.",
+    description: 'Spot the odd one out. 6 rounds, 15s each. No negative marking.',
     icon: Ghost,
     color: '#9C27B0',
     bgLight: 'bg-[#f3e5f5]',
@@ -109,13 +107,13 @@ export default function GamesPanel() {
       snap.forEach(d => scores.push({ id: d.id, ...d.data() }));
       setArcadeScores(scores.sort((a, b) => {
         if ((b.totalScore || 0) !== (a.totalScore || 0)) {
-          return (b.totalScore || 0) - (a.totalScore || 0); // DESC
+          return (b.totalScore || 0) - (a.totalScore || 0);
         }
-        // Tie-breaker: lastUpdated ASC (earliest wins)
+        // Tie-breaker: earliest submission wins
         const aTime = a.lastUpdated?.toMillis?.() || Date.now();
         const bTime = b.lastUpdated?.toMillis?.() || Date.now();
         return aTime - bTime;
-      }).slice(0, 10)); // Top 10
+      }).slice(0, 10));
     });
 
     return () => {
@@ -142,7 +140,7 @@ export default function GamesPanel() {
             {user && user.photoURL && (
               <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full border border-gray-200" />
             )}
-            <button onClick={() => { localStorage.clear(); signOut(auth); navigate('/'); }} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+            <button onClick={() => { signOut(auth); navigate('/'); }} className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400">
               <LogOut size={18} />
             </button>
           </div>
@@ -162,12 +160,22 @@ export default function GamesPanel() {
             Hey, <span className="text-[#4285F4]">{user?.displayName?.split(' ')[0] || 'Player'}</span> 👋
           </h1>
           <p className="text-gray-500 text-base md:text-lg mb-4 md:mb-6">Pick a game and show everyone what you've got!</p>
-          <button 
+          <div className="mb-4 md:mb-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900">
+            Scores, approvals, and badges are linked to this Gmail: <strong>{user?.email}</strong>. Do not share one Gmail between players.
+          </div>
+          <button
             onClick={() => setShowLeaderboard(true)}
             className="inline-flex items-center gap-2 bg-[#34A853] hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition-colors shadow-sm hover:shadow-md"
           >
             <Trophy size={20} />
             View Arcade Leaderboard
+          </button>
+          <button
+            onClick={() => navigate('/credential/mybadges')}
+            className="ml-0 md:ml-3 mt-3 md:mt-0 inline-flex items-center gap-2 bg-[#4285F4] hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full transition-colors shadow-sm hover:shadow-md"
+          >
+            <Award size={20} />
+            My Badges
           </button>
         </motion.div>
 
@@ -179,11 +187,10 @@ export default function GamesPanel() {
           className="w-full sm:w-3/4 md:w-5/12 lg:w-1/3 bg-white border border-gray-100 rounded-2xl p-4 md:p-5 shadow-sm"
         >
           <h3 className="text-xs md:text-sm font-bold uppercase tracking-wider text-gray-400 mb-3 text-center">🏆 Prizes You Can Win</h3>
-          
           <div className="flex justify-center items-center w-full rounded-xl overflow-hidden bg-gray-50/50 p-2 border border-gray-100">
-            <img 
-              src="/Goodies.png" 
-              alt="Exciting Prizes" 
+            <img
+              src="/Goodies.png"
+              alt="Exciting Prizes"
               className="w-full h-auto object-contain max-h-[160px] md:max-h-[200px] hover:scale-105 transition-transform duration-500"
             />
           </div>
@@ -199,7 +206,6 @@ export default function GamesPanel() {
       >
         {GAMES.map((game) => {
           const Icon = game.icon;
-
           return (
             <motion.button
               key={game.id}
@@ -230,10 +236,15 @@ export default function GamesPanel() {
         })}
       </motion.div>
 
+      {/* Version label */}
+      <div className="fixed bottom-4 left-4 z-10 text-xs font-mono font-semibold select-none" style={{ color: '#9C27B0' }}>
+        v101.11
+      </div>
+
       {/* Leaderboard Modal */}
       {showLeaderboard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-3xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[80vh]"
@@ -242,14 +253,14 @@ export default function GamesPanel() {
               <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2">
                 <Trophy className="text-[#34A853]" /> Top 10 Leaderboard
               </h2>
-              <button 
+              <button
                 onClick={() => setShowLeaderboard(false)}
                 className="p-2 bg-white rounded-full text-gray-400 hover:text-gray-600 shadow-sm"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto">
               <div className="space-y-3">
                 {arcadeScores.length === 0 ? (

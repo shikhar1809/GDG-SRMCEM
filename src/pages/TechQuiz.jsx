@@ -7,6 +7,7 @@ import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/fi
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { TECH_QUIZ_QUESTIONS } from '../utils/gameData/techQuizData';
 import { arcadePoints, drawGradedSet, shuffleOptions, PASS_MARKS } from '../utils/scoring';
+import { createGameRequestPayload, isApprovedForThisDevice } from '../utils/gameRequests';
 
 const GAME_ID = 'tech-quiz';
 const PASS_MARK_PCT = Math.round(PASS_MARKS['tech-quiz'] * 100);
@@ -75,9 +76,14 @@ export default function TechQuiz() {
         setLobbyCode(null);
         return;
       }
-      setRequestStatus(snap.data().status);
-      setLobbyCode(snap.data().lobbyCode || null);
-      if (snap.data().status === 'approved') setIsStarted((s) => s || true);
+      const data = snap.data();
+      setLobbyCode(data.lobbyCode || null);
+      if (data.status === 'approved' && !isApprovedForThisDevice(data, GAME_ID)) {
+        setRequestStatus('device-mismatch');
+        return;
+      }
+      setRequestStatus(data.status);
+      if (isApprovedForThisDevice(data, GAME_ID)) setIsStarted((s) => s || true);
     });
     return () => unsub();
   }, []);
@@ -235,15 +241,10 @@ export default function TechQuiz() {
                 <button
                   onClick={async () => {
                     if (!auth.currentUser) return;
-                    await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
-                      userId: auth.currentUser.uid,
-                      userName: auth.currentUser.displayName || 'Player',
-                      userEmail: auth.currentUser.email,
-                      gameId: GAME_ID,
-                      status: 'pending',
-                      lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                      timestamp: serverTimestamp(),
-                    });
+                    await setDoc(
+                      doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`),
+                      createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp)
+                    );
                   }}
                   className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#EA4335] hover:bg-red-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg"
                 >
@@ -279,6 +280,11 @@ export default function TechQuiz() {
               {requestStatus === 'completed' && (
                 <div className="bg-gray-100 text-gray-500 p-4 rounded-xl">
                   <span className="font-bold">You have already played this game.</span>
+                </div>
+              )}
+              {requestStatus === 'device-mismatch' && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm">
+                  This Gmail was approved on another device. Use the device that showed this lobby code, or ask a volunteer to reject and request again.
                 </div>
               )}
             </div>

@@ -5,6 +5,8 @@ import { auth, db } from '../firebase';
 import { PROMPT_CHALLENGES } from '../utils/gameData/promptWarsData';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { arcadePointsFromRatio, drawGradedSet, promptSimilarity, contentWords, PASS_MARKS } from '../utils/scoring';
+import { preloadImages } from '../utils/imagePreload';
+import { createGameRequestPayload, isApprovedForThisDevice } from '../utils/gameRequests';
 import { Send, Clock, ChevronLeft, Trophy, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,16 +71,20 @@ const PromptWars = () => {
         setLobbyCode(null);
         return;
       }
-      setRequestStatus(snap.data().status);
-      setLobbyCode(snap.data().lobbyCode || null);
+      const data = snap.data();
+      setLobbyCode(data.lobbyCode || null);
+      if (data.status === 'approved' && !isApprovedForThisDevice(data, GAME_ID)) {
+        setRequestStatus('device-mismatch');
+        return;
+      }
+      setRequestStatus(data.status);
     });
     return () => unsub();
   }, []);
 
-  // Warm the next image while the player types this one.
+  // Warm the next few images while the player types this one.
   useEffect(() => {
-    const next = rounds[roundIndex + 1];
-    if (next) new Image().src = next.src;
+    preloadImages(rounds, roundIndex + 1, 2);
   }, [rounds, roundIndex]);
 
   useEffect(() => {
@@ -283,15 +289,10 @@ const PromptWars = () => {
                     <button
                       onClick={async () => {
                         if (!auth.currentUser) return;
-                        await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
-                          userId: auth.currentUser.uid,
-                          userName: auth.currentUser.displayName || 'Player',
-                          userEmail: auth.currentUser.email,
-                          gameId: GAME_ID,
-                          status: 'pending',
-                          lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                          timestamp: serverTimestamp(),
-                        });
+                        await setDoc(
+                          doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`),
+                          createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp)
+                        );
                       }}
                       className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#9C27B0] hover:bg-purple-700 text-white font-bold rounded-xl text-lg transition-colors shadow-lg mb-4"
                     >
@@ -314,6 +315,11 @@ const PromptWars = () => {
                   {requestStatus === 'completed' && (
                     <div className="bg-gray-100 text-gray-500 p-4 rounded-xl mb-4">
                       <span className="font-bold">You have already played this game.</span>
+                    </div>
+                  )}
+                  {requestStatus === 'device-mismatch' && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm mb-4">
+                      This Gmail was approved on another device. Use the device that showed this lobby code, or ask a volunteer to reject and request again.
                     </div>
                   )}
 
@@ -347,7 +353,7 @@ const PromptWars = () => {
             >
               <div className="flex flex-col gap-4">
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-2 shadow-lg overflow-hidden">
-                  <div className="relative rounded-xl overflow-hidden aspect-square bg-gray-200 flex items-center justify-center">
+                  <div className="relative rounded-xl overflow-hidden aspect-square max-h-[58vh] mx-auto bg-gray-200 flex items-center justify-center">
                     {!imageReady && !imageFailed && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-500">
                         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#9C27B0]" />
@@ -377,6 +383,12 @@ const PromptWars = () => {
                       className={`w-full h-full object-cover transition-opacity duration-200 ${
                         imageReady ? 'opacity-100' : 'opacity-0'
                       }`}
+                      width="768"
+                      height="768"
+                      sizes="(max-width: 1024px) calc(100vw - 48px), 420px"
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority="high"
                       onLoad={() => setImageReady(true)}
                       onError={() => setImageFailed(true)}
                       draggable={false}

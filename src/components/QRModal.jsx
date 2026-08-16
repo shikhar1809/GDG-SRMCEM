@@ -18,6 +18,7 @@ export default function QRModal({
   level,
   status,
   hint,
+  hintImage,
   claim,
   formUrl,
   claimedCount,
@@ -153,9 +154,12 @@ export default function QRModal({
                   <Lightbulb size={16} />
                   <span className="text-xs font-black uppercase tracking-wider">Your Clue</span>
                 </div>
-                <p className="text-gray-200 text-sm leading-relaxed">
+                <p className={`text-gray-200 text-sm leading-relaxed ${hintImage ? 'mb-3' : ''}`}>
                   {hint || 'No clue has been set for this level yet.'}
                 </p>
+                {hintImage && (
+                  <img src={hintImage} alt="Clue" className="w-full h-auto rounded-xl object-contain bg-gray-900 border border-gray-700 max-h-48" />
+                )}
               </div>
 
               <p className="text-gray-400 text-xs mb-4">

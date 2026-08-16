@@ -20,13 +20,18 @@ const BASE = process.env.BASE_URL || 'http://localhost:4173';
 const HEADED = process.argv.includes('--headed');
 
 const CHROME_CANDIDATES = [
+  `${process.env.LOCALAPPDATA}/ms-playwright/chromium-1234/chrome-win64/chrome.exe`,
+  `${process.env.LOCALAPPDATA}/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe`,
+  `${process.env.ProgramFiles}/Google/Chrome/Application/chrome.exe`,
+  `${process.env['ProgramFiles(x86)']}/Google/Chrome/Application/chrome.exe`,
+  `${process.env.ProgramFiles}/Microsoft/Edge/Application/msedge.exe`,
+  `${process.env['ProgramFiles(x86)']}/Microsoft/Edge/Application/msedge.exe`,
   `${process.env.HOME}/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome`,
   `${process.env.HOME}/.cache/ms-playwright/chromium-1208/chrome-linux/chrome`,
   '/usr/bin/google-chrome',
   '/usr/bin/chromium',
 ];
 const executablePath = CHROME_CANDIDATES.find((p) => existsSync(p));
-if (!executablePath) throw new Error('no chromium binary found');
 
 const log = (...a) => console.log(...a);
 
@@ -37,7 +42,7 @@ const record = (name, ok, detail) => {
 };
 
 const run = async () => {
-  const browser = await chromium.launch({ executablePath, headless: !HEADED });
+  const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}), headless: !HEADED });
   const ctx = await browser.newContext({ viewport: { width: 420, height: 860 } });
 
   // Surface real page errors - a silent React crash would otherwise look like

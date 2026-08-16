@@ -7,10 +7,99 @@ service cloud.firestore {
         request.auth.token.email in get(/databases/$(database)/documents/huntConfig/global).data.adminEmails;
     }
 
+    function hasArcadeScore(userId) {
+      return exists(/databases/$(database)/documents/arcadeScores/$(userId));
+    }
+
+    function arcadeScore(userId, fieldName) {
+      return get(/databases/$(database)/documents/arcadeScores/$(userId)).data.get(fieldName, 0);
+    }
+
+    function arcadePlayed(userId, fieldName) {
+      return get(/databases/$(database)/documents/arcadeScores/$(userId)).data.get(fieldName, false);
+    }
+
+    function hasParticipated(userId) {
+      return hasArcadeScore(userId) && (
+        arcadePlayed(userId, 'played_tech-recall') == true ||
+        arcadePlayed(userId, 'played_prompt-wars') == true ||
+        arcadePlayed(userId, 'played_guess-impostor') == true ||
+        arcadePlayed(userId, 'played_ai-eye') == true ||
+        arcadePlayed(userId, 'played_tech-quiz') == true ||
+        arcadePlayed(userId, 'played_mystery-hunt') == true ||
+        arcadeScore(userId, 'score_tech-recall') >= 0 ||
+        arcadeScore(userId, 'score_prompt-wars') >= 0 ||
+        arcadeScore(userId, 'score_guess-impostor') >= 0 ||
+        arcadeScore(userId, 'score_ai-eye') >= 0 ||
+        arcadeScore(userId, 'score_tech-quiz') >= 0 ||
+        arcadeScore(userId, 'score_mystery-hunt') >= 0
+      );
+    }
+
+    function wonTechRecall(userId) {
+      return hasArcadeScore(userId) && arcadeScore(userId, 'score_tech-recall') >= 1;
+    }
+
+    function wonPromptWars(userId) {
+      return hasArcadeScore(userId) && arcadeScore(userId, 'score_prompt-wars') >= 1;
+    }
+
+    function wonGuessImpostor(userId) {
+      return hasArcadeScore(userId) && arcadeScore(userId, 'score_guess-impostor') >= 1;
+    }
+
+    function wonAiEye(userId) {
+      return hasArcadeScore(userId) && arcadeScore(userId, 'score_ai-eye') >= 1;
+    }
+
+    function wonTechQuiz(userId) {
+      return hasArcadeScore(userId) && arcadeScore(userId, 'score_tech-quiz') >= 1;
+    }
+
+    function wonMysteryHunt(userId) {
+      return hasArcadeScore(userId) && arcadeScore(userId, 'score_mystery-hunt') >= 75;
+    }
+
+    function wonGameCount(userId) {
+      return (wonTechRecall(userId) ? 1 : 0) +
+        (wonPromptWars(userId) ? 1 : 0) +
+        (wonGuessImpostor(userId) ? 1 : 0) +
+        (wonAiEye(userId) ? 1 : 0) +
+        (wonTechQuiz(userId) ? 1 : 0) +
+        (wonMysteryHunt(userId) ? 1 : 0);
+    }
+
+    function hasWonAllNonMysteryGames(userId) {
+      return wonTechRecall(userId) &&
+        wonPromptWars(userId) &&
+        wonGuessImpostor(userId) &&
+        wonAiEye(userId) &&
+        wonTechQuiz(userId);
+    }
+
+    function canClaimBadge(userId, badgeId) {
+      return (badgeId == 'arcade-participant' && hasParticipated(userId)) ||
+        (badgeId == 'multi-game-winner' && wonGameCount(userId) > 3) ||
+        (badgeId == 'arcade-sweeper' && hasWonAllNonMysteryGames(userId));
+    }
+
+    function manualBadgeAward(email, badgeId) {
+      return get(/databases/$(database)/documents/manualCredentialBadges/$(email)/badges/$(badgeId)).data;
+    }
+
+    function canClaimManualBadge(badgeId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/manualCredentialBadges/$(request.auth.token.email)/badges/$(badgeId)) &&
+        request.resource.data.source == 'manual' &&
+        request.resource.data.templateId == manualBadgeAward(request.auth.token.email, badgeId).templateId &&
+        request.resource.data.title == manualBadgeAward(request.auth.token.email, badgeId).title &&
+        request.resource.data.tier == manualBadgeAward(request.auth.token.email, badgeId).tier;
+    }
+
     // Mystery Hunt
     match /levelCodes/{code} {
       allow get: if true;
-      allow list: if false;
+      allow list: if isAdmin();
       allow read, write: if isAdmin();
     }
 
@@ -21,7 +110,23 @@ service cloud.firestore {
 
     match /huntPlayers/{playerId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == playerId;
+      allow write: if request.auth != null && (request.auth.uid == playerId || isAdmin());
+    }
+
+    match /huntTeams/{teamId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if request.auth != null || isAdmin();
+    }
+
+    match /huntBroadcasts/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() || request.auth != null; // Players send automated win broadcasts
+    }
+
+    match /huntState/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // ---------------------------------------------------------------------
@@ -41,7 +146,7 @@ service cloud.firestore {
     // what keeps the form link secret until a level is actually cracked.
     match /huntLevelCodes/{code} {
       allow get: if true;
-      allow list: if false;
+      allow list: if isAdmin();
       allow write: if isAdmin();
     }
 
@@ -81,9 +186,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin can delete submissions for leaderboard reset
     match /promptWarsSubmissions/{docId} {
       allow read: if isAdmin();
       allow create: if true;
+      allow delete: if isAdmin();
     }
 
     // AI Eye
@@ -92,9 +199,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin can delete scores for leaderboard reset
     match /aiEyeScores/{docId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == docId;
+      allow write: if request.auth != null && (request.auth.uid == docId || isAdmin());
     }
 
     // Tech Quiz
@@ -103,9 +211,22 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin can delete scores for leaderboard reset
     match /techQuizScores/{docId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == docId;
+      allow write: if request.auth != null && (request.auth.uid == docId || isAdmin());
+    }
+
+    // Admin can delete scores for leaderboard reset
+    match /techRecallScores/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null && (request.auth.uid == docId || isAdmin());
+    }
+
+    // Admin can delete scores for leaderboard reset
+    match /guessImpostorScores/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null && (request.auth.uid == docId || isAdmin());
     }
 
     match /gameRequests/{docId} {
@@ -113,9 +234,63 @@ service cloud.firestore {
       allow write: if request.auth != null && (docId.matches(request.auth.uid + '.*') || isAdmin());
     }
 
+    // Admin can delete any score doc for leaderboard reset
     match /arcadeScores/{docId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == docId;
+      allow write: if request.auth != null && (request.auth.uid == docId || isAdmin());
+    }
+
+    match /badgeTemplates/{templateId} {
+      allow read: if request.auth != null;
+      allow create, update: if isAdmin()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 2
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.eventName is string
+        && request.resource.data.eventName.size() >= 2
+        && request.resource.data.eventName.size() <= 100;
+      allow delete: if isAdmin();
+    }
+
+    match /manualCredentialBadges/{email} {
+      allow read: if request.auth != null && (request.auth.token.email == email || isAdmin());
+      allow write: if false;
+
+      match /badges/{badgeId} {
+        allow read: if request.auth != null && (request.auth.token.email == email || isAdmin());
+        allow create, update: if isAdmin()
+          && request.resource.data.badgeId == badgeId
+          && request.resource.data.source == 'manual'
+          && request.resource.data.recipientEmail == email
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 2
+          && request.resource.data.title.size() <= 80
+          && request.resource.data.templateId is string;
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /credentialBadges/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.userId == userId
+        && request.resource.data.email == request.auth.token.email;
+
+      match /badges/{badgeId} {
+        allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.userId == userId
+          && request.resource.data.badgeId == badgeId
+          && request.resource.data.recipientEmail == request.auth.token.email
+          && request.resource.data.rulesVersion == '2026-08-15.badges.v1'
+          && request.resource.data.claimedName is string
+          && request.resource.data.claimedName.size() >= 2
+          && request.resource.data.claimedName.size() <= 60
+          && (canClaimBadge(userId, badgeId) || canClaimManualBadge(badgeId));
+        allow delete: if false;
+      }
     }
   }
 }

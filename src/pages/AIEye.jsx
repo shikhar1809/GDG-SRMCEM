@@ -7,6 +7,8 @@ import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/fi
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { AI_EYE_IMAGES } from '../utils/gameData/aiEyeData';
 import { arcadePoints, shuffleArray, PASS_MARKS } from '../utils/scoring';
+import { preloadImages } from '../utils/imagePreload';
+import { createGameRequestPayload, isApprovedForThisDevice } from '../utils/gameRequests';
 
 const GAME_ID = 'ai-eye';
 const PASS_MARK_PCT = Math.round(PASS_MARKS['ai-eye'] * 100);
@@ -70,17 +72,21 @@ const AIEye = () => {
         setLobbyCode(null);
         return;
       }
-      setRequestStatus(snap.data().status);
-      setLobbyCode(snap.data().lobbyCode || null);
-      if (snap.data().status === 'approved') setIsStarted((s) => s || true);
+      const data = snap.data();
+      setLobbyCode(data.lobbyCode || null);
+      if (data.status === 'approved' && !isApprovedForThisDevice(data, GAME_ID)) {
+        setRequestStatus('device-mismatch');
+        return;
+      }
+      setRequestStatus(data.status);
+      if (isApprovedForThisDevice(data, GAME_ID)) setIsStarted((s) => s || true);
     });
     return () => unsub();
   }, []);
 
-  // Warm the next image so the round after this one starts instantly.
+  // Warm the next few images so the next round starts instantly on stall Wi-Fi.
   useEffect(() => {
-    const next = images[currentIndex + 1];
-    if (next) new Image().src = next.src;
+    preloadImages(images, currentIndex + 1, 3);
   }, [images, currentIndex]);
 
   // Reset load state whenever the round changes.
@@ -239,15 +245,10 @@ const AIEye = () => {
                 <button
                   onClick={async () => {
                     if (!auth.currentUser) return;
-                    await setDoc(doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`), {
-                      userId: auth.currentUser.uid,
-                      userName: auth.currentUser.displayName || 'Player',
-                      userEmail: auth.currentUser.email,
-                      gameId: GAME_ID,
-                      status: 'pending',
-                      lobbyCode: Math.floor(100 + Math.random() * 900).toString(),
-                      timestamp: serverTimestamp(),
-                    });
+                    await setDoc(
+                      doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`),
+                      createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp)
+                    );
                   }}
                   className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#34A853] hover:bg-green-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg"
                 >
@@ -285,6 +286,11 @@ const AIEye = () => {
                   <span className="font-bold">You have already played this game.</span>
                 </div>
               )}
+              {requestStatus === 'device-mismatch' && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm">
+                  This Gmail was approved on another device. Use the device that showed this lobby code, or ask a volunteer to reject and request again.
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -301,6 +307,8 @@ const AIEye = () => {
 
   if (isGameOver) {
     const net = Math.max(0, score - wrongRef.current);
+    const total = images.length || PER_SIDE * 2;
+    const requiredNet = Math.ceil(total * PASS_MARKS[GAME_ID]);
     return (
       <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col items-center justify-center relative overflow-hidden">
         <button
@@ -339,9 +347,12 @@ const AIEye = () => {
               {earnedPoints === null ? '—' : earnedPoints}
               <span className="text-lg text-gray-400"> / 100</span>
             </p>
+            <p className="text-xs text-gray-600 mt-2 px-3">
+              AI Eye uses net score: {score} right - {wrongRef.current} wrong = {net}/{total}.
+            </p>
             {earnedPoints === 0 && (
               <p className="text-xs text-gray-500 mt-2 px-2">
-                You need {PASS_MARK_PCT}% to score. Nothing added this time — try again!
+                You need net {requiredNet}/{total} ({PASS_MARK_PCT}%) to earn points. Nothing added this time.
               </p>
             )}
           </div>
@@ -465,7 +476,7 @@ const AIEye = () => {
               )}
             </AnimatePresence>
 
-            <div className="relative w-full aspect-square rounded-2xl overflow-hidden mb-5 bg-gray-200 flex-shrink-0">
+            <div className="relative w-full aspect-square max-h-[52vh] mx-auto rounded-2xl overflow-hidden mb-5 bg-gray-200 flex-shrink-0">
               {!imageReady && !imageFailed && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-500">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#34A853]" />
@@ -494,6 +505,12 @@ const AIEye = () => {
                   className={`w-full h-full object-cover transition-opacity duration-200 ${
                     imageReady ? 'opacity-100' : 'opacity-0'
                   }`}
+                  width="768"
+                  height="768"
+                  sizes="(max-width: 768px) calc(100vw - 48px), 640px"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
                   draggable={false}
                   onLoad={() => setImageReady(true)}
                   onError={() => setImageFailed(true)}
