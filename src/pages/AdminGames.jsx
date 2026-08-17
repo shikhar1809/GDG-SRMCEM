@@ -7,6 +7,9 @@ import { Shield, RefreshCw, LogOut, Users, Settings, Brain, Search, Globe, Power
 import { ALL_LEVELS, MEGA_LEVEL, NORMAL_LEVELS, normalizeCode, claimedNormalCount, isMegaLevel, MEGA_LEVEL_POINTS, NORMAL_LEVEL_POINTS } from '../utils/huntConfig';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { drawGradedSet } from '../utils/scoring';
+import { GUESS_TRIVIA_QUESTIONS } from '../utils/gameData/guessTheTriviaData';
+import { preloadImages } from '../utils/imagePreload';
 
 const SUPER_ADMINS = ['royalshikher@gmail.com', 'i.e.ishantiwari@gmail.com'];
 
@@ -38,6 +41,9 @@ export default function AdminGames() {
   // Arcade Leaderboard State
   const [arcadeScores, setArcadeScores] = useState([]);
   
+  // Guess Content State
+  const [gcState, setGcState] = useState(null);
+  
   // Prompt Wars State
   const [pwRoundName, setPwRoundName] = useState('');
   const [pwImageUrl, setPwImageUrl] = useState('');
@@ -46,6 +52,25 @@ export default function AdminGames() {
   const [pwSaving, setPwSaving] = useState(false);
   const [pwSubmissions, setPwSubmissions] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [triviaMode, setTriviaMode] = useState('logo');
+  const [stagedQuestions, setStagedQuestions] = useState([]);
+
+  useEffect(() => {
+    const questions = GUESS_TRIVIA_QUESTIONS.filter(q => q.type === triviaMode);
+    let newQuestions = [];
+    try {
+      newQuestions = drawGradedSet(questions, { easy: 2, medium: 2, hard: 1 });
+    } catch (e) {
+      newQuestions = [...questions].sort(() => 0.5 - Math.random()).slice(0, 5);
+    }
+    setStagedQuestions(newQuestions);
+  }, [triviaMode]);
+
+  useEffect(() => {
+    if (stagedQuestions && stagedQuestions.length > 0) {
+      preloadImages(stagedQuestions, 0, 5);
+    }
+  }, [stagedQuestions]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -110,6 +135,15 @@ export default function AdminGames() {
       const scores = [];
       snap.forEach(d => scores.push({ id: d.id, ...d.data() }));
       setArcadeScores(scores.sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0)));
+    });
+
+    // Fetch Guess Content State
+    const gcUnsub = onSnapshot(doc(db, 'guessTheTrivia', 'gameState'), (snap) => {
+      if (snap.exists()) {
+        setGcState(snap.data());
+      } else {
+        setGcState({ status: 'waiting', roundIndex: 0 });
+      }
     });
 
     // Fetch Prompt Wars Submissions
@@ -183,6 +217,7 @@ export default function AdminGames() {
       pwSubsUnsub();
       requestsUnsub();
       arcadeUnsub();
+      gcUnsub();
       huntLevelsUnsub();
       huntClaimsUnsub();
       teamsUnsub();
@@ -212,12 +247,12 @@ export default function AdminGames() {
     const claimed = Object.keys(huntClaims).length;
     if (
       !window.confirm(
-        `Reopen ALL hunt levels? This deletes ${claimed} claim(s), so every level goes back up for grabs and the Mega Level re-locks. Clues and codes are kept.`
+        `RESET ENTIRE MYSTERY HUNT?\n\nThis will:\n- Delete all ${claimed} claim(s)\n- Hide all revealed hints\n- Lock the game back up\n\nClues, codes, and teams are kept.`
       )
     )
       return;
     try {
-      // For each claim, deduct points from the team
+      // 1. Deduct points from teams for claimed levels
       for (const level of Object.keys(huntClaims)) {
         const claim = huntClaims[level];
         if (claim && claim.teamId) {
@@ -225,10 +260,22 @@ export default function AdminGames() {
           await updateDoc(doc(db, 'huntTeams', claim.teamId), { score: increment(-pts) }).catch(() => {});
         }
       }
+      
+      // 2. Delete all claims
       await Promise.all(
         Object.keys(huntClaims).map((level) => deleteDoc(doc(db, 'huntClaims', String(level))))
       );
-      alert('All levels reopened.');
+
+      // 3. Reset activeHint to 0 for all levels so old session data doesn't persist
+      const levelUpdates = ALL_LEVELS.map((level) => 
+        setDoc(doc(db, 'huntLevels', String(level)), { activeHint: 0 }, { merge: true })
+      );
+      await Promise.all(levelUpdates);
+
+      // 4. Lock the hunt again
+      await setDoc(doc(db, 'huntState', 'status'), { state: 'locked', forceMegaUnlock: false }, { merge: true });
+
+      alert('Mystery Hunt has been fully reset. All hints are hidden and levels reopened.');
     } catch (e) {
       console.error(e);
       alert('Failed to reset the hunt. Ensure you have admin privileges.');
@@ -761,6 +808,12 @@ export default function AdminGames() {
           >
             <Eye size={18} /> AI Eye
           </button>
+          <button 
+            onClick={() => setActiveTab('guesstrivia')}
+            className={`flex items-center gap-2 py-4 px-2 border-b-2 font-bold text-sm whitespace-nowrap transition-colors ${activeTab === 'guesstrivia' ? 'border-orange-500 text-orange-500' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
+          >
+            <Brain size={18} /> Guess Trivia
+          </button>
         </div>
       </div>
 
@@ -789,6 +842,7 @@ export default function AdminGames() {
                       <th className="pb-4 font-bold uppercase tracking-wider text-red-400 text-xs">Prompt Wars</th>
                       <th className="pb-4 font-bold uppercase tracking-wider text-green-400 text-xs">AI Eye</th>
                       <th className="pb-4 font-bold uppercase tracking-wider text-purple-400 text-xs">Impostor</th>
+                      <th className="pb-4 font-bold uppercase tracking-wider text-orange-500 text-xs">Guess Trivia</th>
                       <th className="pb-4 font-bold uppercase tracking-wider text-gray-700 text-xs text-right">Total</th>
                     </tr>
                   </thead>
@@ -828,6 +882,7 @@ export default function AdminGames() {
                           <ScoreCell gid="prompt-wars" color="text-red-500" />
                           <ScoreCell gid="ai-eye" color="text-green-500" />
                           <ScoreCell gid="guess-impostor" color="text-purple-500" />
+                          <ScoreCell gid="guess-the-trivia" color="text-orange-500" />
                           <td className="py-4 text-right pr-2">
                             <span className={`font-black text-xl ${idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-500' : idx === 2 ? 'text-amber-600' : 'text-gray-700'}`}>
                               {score.totalScore}
@@ -1320,37 +1375,26 @@ export default function AdminGames() {
                               className={`w-full border rounded-lg p-2 text-sm focus:outline-none transition-colors resize-none mb-2 ${cfg.activeHintLevel === hl ? 'border-blue-300 bg-blue-50/50 focus:border-blue-500 text-blue-900' : 'border-gray-200 focus:border-[#4285F4]'}`}
                             />
                             {hl === 3 && (
-                              <div className="flex flex-col gap-2">
-                                <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 mt-2">
+                                <div className="flex-1 relative flex items-center">
                                   <input 
-                                    type="file" 
-                                    accept="image/*"
-                                    onChange={(e) => handleImageUpload(level, hl, e.target.files[0])}
-                                    className="text-[10px] w-full max-w-[200px] text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer"
+                                    type="url"
+                                    value={cfg[`hintImage${hl}`] || ''}
+                                    onChange={(e) => setHuntField(level, `hintImage${hl}`, e.target.value)}
+                                    placeholder="Paste Hint Image URL here..."
+                                    className={`w-full border rounded p-2 text-xs focus:outline-none focus:border-[#4285F4] pr-8 ${cfg[`hintImage${hl}`] ? 'border-green-400 bg-green-50 text-green-900' : 'border-gray-200'}`}
                                   />
                                   {cfg[`hintImage${hl}`] && (
-                                    <a href={cfg[`hintImage${hl}`]} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline ml-2 whitespace-nowrap">
-                                      View Image
-                                    </a>
+                                    <div className="absolute right-2 text-green-500" title="Image URL loaded">
+                                      <CheckCircle2 size={16} />
+                                    </div>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-bold text-gray-400">OR</span>
-                                  <div className="flex-1 relative flex items-center">
-                                    <input 
-                                      type="url"
-                                      value={cfg[`hintImage${hl}`] || ''}
-                                      onChange={(e) => setHuntField(level, `hintImage${hl}`, e.target.value)}
-                                      placeholder="Paste an Image URL instead..."
-                                      className={`w-full border rounded p-1.5 text-xs focus:outline-none focus:border-[#4285F4] pr-8 ${cfg[`hintImage${hl}`] ? 'border-green-400 bg-green-50 text-green-900' : 'border-gray-200'}`}
-                                    />
-                                    {cfg[`hintImage${hl}`] && (
-                                      <div className="absolute right-2 text-green-500" title="Image URL loaded">
-                                        <CheckCircle2 size={16} />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                                {cfg[`hintImage${hl}`] && (
+                                  <a href={cfg[`hintImage${hl}`]} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline whitespace-nowrap bg-blue-50 px-2 py-1.5 rounded border border-blue-100">
+                                    View
+                                  </a>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1401,12 +1445,12 @@ export default function AdminGames() {
                   {/* Danger Zone */}
               <div className="bg-white p-6 rounded-3xl shadow-sm border border-red-100">
                 <h2 className="text-xl font-bold mb-4 text-[#EA4335] flex items-center gap-2"><RefreshCw /> Danger Zone</h2>
-                <p className="text-sm text-gray-500 mb-6 leading-relaxed">Force all currently playing clients to immediately reset back to Level 1. Use carefully.</p>
+                <p className="text-sm text-gray-500 mb-6 leading-relaxed">Completely wipes all old game session data. Deletes all claims, hides all hints, and locks the game back up. Use carefully.</p>
                 <button 
                   onClick={handleRestartAll}
                   className="w-full bg-red-50 text-[#EA4335] font-bold py-4 rounded-xl hover:bg-red-100 transition-colors border border-red-200"
                 >
-                  Restart Hunt for All
+                  Reset Mystery Hunt
                 </button>
               </div>
                 </div>
@@ -1479,6 +1523,331 @@ export default function AdminGames() {
                 </div>
               );
             })()}
+
+
+          </div>
+        )}
+
+        {/* --- GUESS THE TRIVIA TAB --- */}
+        {activeTab === 'guesstrivia' && (
+          <div className="space-y-6">
+            
+            {/* Game Controller */}
+            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-orange-100 max-w-6xl">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-orange-600">
+                <Brain /> Guess Trivia Game Controller
+              </h2>
+              <div className="flex flex-col md:flex-row gap-4 items-center bg-orange-50 p-6 rounded-2xl border border-orange-200">
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">Current State</p>
+                  <p className="text-2xl font-black text-gray-900 uppercase">
+                    {gcState?.status || 'Locked'}
+                  </p>
+                  {gcState?.status === 'playing' && (
+                    <p className="text-sm text-gray-600 font-medium mt-1">Round {gcState.roundIndex + 1} of 5</p>
+                  )}
+                </div>
+                
+                <div className="flex flex-col items-center justify-center gap-2 mr-4">
+                  <p className="text-xs font-bold text-orange-800 uppercase tracking-wider">Game Mode</p>
+                  <select 
+                    value={triviaMode} 
+                    onChange={(e) => setTriviaMode(e.target.value)}
+                    disabled={gcState?.status === 'playing' || gcState?.status === 'staging'}
+                    className="bg-white border border-orange-200 rounded-xl px-4 py-2 font-bold text-orange-700 outline-none disabled:opacity-50"
+                  >
+                    <option value="logo">Logo Guessing</option>
+                    <option value="movie">Movie Guessing</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 flex-wrap justify-end">
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm("Unlock Lobby and allow players to join?")) return;
+                      await setDoc(doc(db, 'guessTheTrivia', 'gameState'), { 
+                        status: 'staging', 
+                        roundIndex: 0,
+                        rounds: stagedQuestions 
+                      }, { merge: true });
+                    }}
+                    className={`px-6 py-3 font-bold rounded-xl transition-colors border-2 ${gcState?.status === 'staging' ? 'bg-purple-500 border-purple-500 text-white shadow-lg' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    Staging
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(`Start Game in ${triviaMode.toUpperCase()} mode? This will immediately start Round 1 for all approved players.`)) return;
+                      
+                      let sharedRounds = stagedQuestions;
+                      // Fallback if empty for some reason
+                      if (!sharedRounds || sharedRounds.length === 0) {
+                        const questions = GUESS_TRIVIA_QUESTIONS.filter(q => q.type === triviaMode);
+                        try {
+                          sharedRounds = drawGradedSet(questions, { easy: 2, medium: 2, hard: 1 });
+                        } catch (e) {
+                          sharedRounds = [...questions].sort(() => 0.5 - Math.random()).slice(0, 5);
+                        }
+                      }
+                      
+                      await setDoc(doc(db, 'guessTheTrivia', 'gameState'), {
+                        status: 'playing',
+                        roundIndex: 0,
+                        rounds: sharedRounds,
+                        roundEndTime: serverTimestamp(),
+                        roundWinner: null,
+                        roundWinnerName: null,
+                        hintUsed: false,
+                        hintLevel: 0,
+                        hintFact: null
+                      }, { merge: true });
+                    }}
+                    className={`px-6 py-3 font-bold rounded-xl transition-colors border-2 ${gcState?.status === 'playing' ? 'bg-[#34A853] border-[#34A853] text-white shadow-lg' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    Start Game
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm("End Game and lock the lobby?")) return;
+                      await setDoc(doc(db, 'guessTheTrivia', 'gameState'), { status: 'locked', roundIndex: 0 }, { merge: true });
+                    }}
+                    className={`px-6 py-3 font-bold rounded-xl transition-colors border-2 bg-white border-gray-200 text-gray-600 hover:bg-gray-50`}
+                  >
+                    End Game
+                  </button>
+                </div>
+              </div>
+
+              {gcState?.status === 'staging' && (() => {
+                const joinedPlayers = gameRequests.filter(req => req.gameId === 'guess-the-trivia' && (req.status === 'pending' || req.status === 'approved'));
+                return joinedPlayers.length > 0 ? (
+                  <div className="mt-6 text-left bg-white rounded-2xl p-6 border border-orange-100">
+                    <p className="text-sm font-bold text-orange-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+                      <span>Players in Waiting Area</span>
+                      <span className="bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full text-xs">{joinedPlayers.length}</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {joinedPlayers.map(p => (
+                        <div key={p.id} className="bg-white border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 shadow-sm flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+                          <div>
+                            <div className="font-bold text-gray-900">{p.displayName || p.userName || 'Anonymous'}</div>
+                            <div className="text-xs text-gray-500 font-normal">{p.userEmail || 'No email'}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {(gcState?.status === 'staging' || gcState?.status === 'locked') && (
+                <div className="mt-6 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                      <Brain className="text-purple-500" />
+                      Preview Questions ({triviaMode.toUpperCase()})
+                    </h3>
+                    <button
+                      onClick={async () => {
+                        const questions = GUESS_TRIVIA_QUESTIONS.filter(q => q.type === triviaMode);
+                        let newQuestions = [];
+                        try {
+                          newQuestions = drawGradedSet(questions, { easy: 2, medium: 2, hard: 1 });
+                        } catch (e) {
+                          newQuestions = [...questions].sort(() => 0.5 - Math.random()).slice(0, 5);
+                        }
+                        setStagedQuestions(newQuestions);
+                        if (gcState?.status === 'staging') {
+                          await setDoc(doc(db, 'guessTheTrivia', 'gameState'), { rounds: newQuestions }, { merge: true });
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold rounded-xl transition-colors text-sm"
+                    >
+                      <RefreshCw size={16} /> Shuffle
+                    </button>
+                  </div>
+
+                  {stagedQuestions.length === 0 ? (
+                    <div className="text-center text-gray-400 py-6">
+                      Click Shuffle to generate the question set.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                      {stagedQuestions.map((q, idx) => (
+                        <div key={idx} className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center">
+                          <span className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Round {idx + 1}</span>
+                          <div className="h-20 w-full mb-3 flex items-center justify-center bg-white rounded-lg p-2 border border-gray-200">
+                            {q.emoji ? (
+                              <span className="text-3xl md:text-4xl">{q.emoji}</span>
+                            ) : (
+                              <img src={q.src} alt={q.answer} className="max-h-full max-w-full object-contain" />
+                            )}
+                          </div>
+                          <span className="font-bold text-gray-800 text-sm break-words">{q.answer}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-2 uppercase tracking-wider ${
+                            q.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                            q.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {q.difficulty}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {gcState?.status === 'playing' && gcState.rounds && (
+                <div className="mt-6 bg-white p-6 rounded-2xl border border-gray-200">
+                  <div className="flex flex-col md:flex-row items-center gap-6">
+                    <div className="flex-1 text-center md:text-left">
+                      <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Round {gcState.roundIndex + 1} Question</p>
+                      <div className="bg-gray-100 p-4 rounded-xl inline-flex items-center justify-center mb-2 min-h-[100px] min-w-[160px]">
+                        {gcState.rounds?.[gcState.roundIndex]?.emoji ? (
+                          <span className="text-5xl">{gcState.rounds?.[gcState.roundIndex]?.emoji}</span>
+                        ) : (
+                          <img src={gcState.rounds?.[gcState.roundIndex]?.src} alt="Question" className="max-h-32 object-contain" />
+                        )}
+                      </div>
+                      {/* Correct answer revealed to admin */}
+                      <div className="mt-2 bg-green-50 border border-green-200 rounded-xl px-4 py-2 inline-block">
+                        <span className="text-xs font-bold text-green-600 uppercase tracking-wider block mb-0.5">✅ Correct Answer</span>
+                        <span className="font-black text-xl text-green-900">{gcState.rounds?.[gcState.roundIndex]?.answer}</span>
+                      </div>
+                      {/* Hint buttons for movie mode — always visible as a full-width row */}
+                      {gcState.rounds?.[gcState.roundIndex]?.type === 'movie' && (
+                        <div className="mt-4 w-full">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">💡 Admin Hints</p>
+                          <div className="flex flex-wrap gap-3">
+                            {/* Hint 1: reveal spelling with first and last letters */}
+                            {!gcState.hintUsed ? (
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm('Drop Hint 1? This reveals the spelling (first and last letters) to all players but the winner gets only HALF the points.')) return;
+                                  await updateDoc(doc(db, 'guessTheTrivia', 'gameState'), { hintUsed: true, hintLevel: 1 });
+                                }}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold rounded-xl transition-colors text-sm shadow"
+                              >
+                                💡 Hint 1 — Reveal Spelling (−50% pts)
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-bold px-4 py-2 rounded-xl">
+                                ✅ Hint 1 Dropped — Points Halved
+                              </div>
+                            )}
+
+                            {/* Hint 2: reveal movie dialogue — only available after hint 1 */}
+                            {gcState.hintUsed && (gcState.hintLevel || 1) < 2 ? (
+                              <button
+                                onClick={async () => {
+                                  const fact = gcState.rounds?.[gcState.roundIndex]?.fact;
+                                  if (!fact) { alert('No dialogue available for this movie.'); return; }
+                                  if (!window.confirm(`Drop Hint 2? This reveals a famous dialogue from the movie to all players.\n\n"${fact}"`)) return;
+                                  await updateDoc(doc(db, 'guessTheTrivia', 'gameState'), { hintLevel: 2, hintFact: fact });
+                                }}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-orange-400 hover:bg-orange-500 text-white font-bold rounded-xl transition-colors text-sm shadow"
+                              >
+                                🎬 Hint 2 — Drop Movie Dialogue
+                              </button>
+                            ) : gcState.hintUsed && (gcState.hintLevel || 1) >= 2 ? (
+                              <div className="flex items-center gap-2 bg-orange-50 border border-orange-300 text-orange-800 text-sm font-bold px-4 py-2 rounded-xl max-w-xs">
+                                ✅ Dialogue Dropped: "{(gcState.hintFact || '').slice(0, 60)}..."
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="shrink-0 flex flex-col items-center gap-2">
+                      {gcState?.roundWinner && (
+                        <div className="bg-green-100 text-green-800 border border-green-200 px-4 py-2 rounded-xl text-center w-full max-w-xs shadow-sm">
+                          <p className="text-xs font-bold uppercase tracking-wider mb-1">Fastest Finger</p>
+                          <p className="font-black text-lg truncate" title={gcState.roundWinnerName}>{gcState.roundWinnerName}</p>
+                        </div>
+                      )}
+                      <button
+                        onClick={async () => {
+                          const nextRound = (gcState.roundIndex || 0) + 1;
+                          if (nextRound >= 5) {
+                            if (!window.confirm("Final round completed. End Game and show results? Players will see their results, and you can manually Lock Lobby when ready.")) return;
+                            await setDoc(doc(db, 'guessTheTrivia', 'gameState'), { status: 'finalResult' }, { merge: true });
+                          } else {
+                            await setDoc(doc(db, 'guessTheTrivia', 'gameState'), { 
+                              roundIndex: nextRound, 
+                              status: 'playing', 
+                              roundEndTime: serverTimestamp(),
+                              roundWinner: null,
+                              roundWinnerName: null,
+                              hintUsed: false,
+                              hintLevel: 0,
+                              hintFact: null
+                            }, { merge: true });
+                          }
+                        }}
+                        className={`px-8 py-4 ${gcState?.roundWinner ? 'bg-[#34A853] hover:bg-green-600 shadow-lg' : 'bg-gray-400 hover:bg-gray-500 shadow-sm'} text-white font-bold rounded-xl transition-colors text-lg w-full min-w-[200px]`}
+                      >
+                        {gcState?.roundWinner ? 'Next Round' : 'Next Question (Skip)'}
+                      </button>
+                      {(gcState?.roundIndex || 0) >= 4 && (
+                        <p className="text-xs font-bold text-gray-500 uppercase">Final Round</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {gcState?.status === 'playing' && (!gcState.rounds || gcState.rounds.length === 0) && (
+                <div className="mt-6 bg-red-50 p-6 rounded-2xl border border-red-200 text-center">
+                  <AlertTriangle className="mx-auto w-12 h-12 text-red-500 mb-4" />
+                  <h3 className="text-xl font-bold text-red-800 mb-2">Game State Corrupted</h3>
+                  <p className="text-red-600 mb-6 text-sm">The game is currently "playing" but there are no questions loaded. This can happen if the game was left in a bad state.</p>
+                  <button
+                    onClick={async () => {
+                      await setDoc(doc(db, 'guessTheTrivia', 'gameState'), { 
+                        status: 'locked',
+                        roundIndex: 0,
+                        rounds: [],
+                        roundWinner: null,
+                        roundWinnerName: null
+                      }, { merge: false });
+                    }}
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-sm"
+                  >
+                    Force Reset Game
+                  </button>
+                </div>
+              )}
+
+              {gcState?.status === 'finalResult' && (
+                <div className="mt-6 bg-green-50 p-6 rounded-2xl border border-green-200 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trophy size={32} className="text-green-600" />
+                  </div>
+                  <h3 className="font-black text-green-900 text-2xl mb-2">Game Finished</h3>
+                  <p className="text-green-800 mb-6 font-medium">Players are now seeing their final results and earning leaderboard points.</p>
+                  
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm("Locking the lobby will reset the game. Proceed?")) return;
+                      await setDoc(doc(db, 'guessTheTrivia', 'gameState'), { 
+                        status: 'locked',
+                        roundIndex: 0,
+                        rounds: [],
+                        roundWinner: null,
+                        roundWinnerName: null
+                      }, { merge: true });
+                    }}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors shadow-md"
+                  >
+                    Lock Lobby & Reset
+                  </button>
+                </div>
+              )}
+            </div>
 
 
           </div>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Clock, Award, RotateCcw, Zap } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { TECH_QUIZ_QUESTIONS } from '../utils/gameData/techQuizData';
 import { arcadePoints, drawGradedSet, shuffleOptions, PASS_MARKS } from '../utils/scoring';
@@ -122,7 +122,14 @@ export default function TechQuiz() {
       });
       await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
       if (requestId) {
-        await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
+        const reqRef = doc(db, 'gameRequests', requestId);
+        const reqDoc = await getDoc(reqRef);
+        const currentPlays = (reqDoc.data()?.playCount || 0) + 1;
+        const isComplete = currentPlays >= 3 && !isAdmin;
+        await setDoc(reqRef, { 
+          status: isComplete ? 'completed' : 'none',
+          playCount: currentPlays
+        }, { merge: true });
       }
     } catch (error) {
       console.error('Error saving Tech Quiz score:', error);
@@ -243,7 +250,8 @@ export default function TechQuiz() {
                     if (!auth.currentUser) return;
                     await setDoc(
                       doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`),
-                      createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp)
+                      createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp),
+                      { merge: true }
                     );
                   }}
                   className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#EA4335] hover:bg-red-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { doc, setDoc, serverTimestamp, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, onSnapshot, deleteDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { PROMPT_CHALLENGES } from '../utils/gameData/promptWarsData';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
@@ -199,13 +199,20 @@ const PromptWars = () => {
         });
         await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
         if (requestId) {
-          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
+          const reqRef = doc(db, 'gameRequests', requestId);
+          const reqDoc = await getDoc(reqRef);
+          const currentPlays = (reqDoc.data()?.playCount || 0) + 1;
+          const isComplete = currentPlays >= 3 && !isAdmin;
+          await setDoc(reqRef, { 
+            status: isComplete ? 'completed' : 'none',
+            playCount: currentPlays
+          }, { merge: true });
         }
       } catch (err) {
         console.error('Error saving Prompt Wars score:', err);
       }
     })();
-  }, [gameState, rounds, requestId, lobbyCode]);
+  }, [gameState, rounds, requestId, lobbyCode, isAdmin]);
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
@@ -291,7 +298,8 @@ const PromptWars = () => {
                         if (!auth.currentUser) return;
                         await setDoc(
                           doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`),
-                          createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp)
+                          createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp),
+                          { merge: true }
                         );
                       }}
                       className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#9C27B0] hover:bg-purple-700 text-white font-bold rounded-xl text-lg transition-colors shadow-lg mb-4"

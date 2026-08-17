@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Camera, Bot, CheckCircle, XCircle, Trophy, Clock, RotateCcw } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { AI_EYE_IMAGES } from '../utils/gameData/aiEyeData';
 import { arcadePoints, shuffleArray, PASS_MARKS } from '../utils/scoring';
@@ -185,13 +185,20 @@ const AIEye = () => {
         });
         await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
         if (requestId) {
-          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
+          const reqRef = doc(db, 'gameRequests', requestId);
+          const reqDoc = await getDoc(reqRef);
+          const currentPlays = (reqDoc.data()?.playCount || 0) + 1;
+          const isComplete = currentPlays >= 3 && !isAdmin;
+          await setDoc(reqRef, { 
+            status: isComplete ? 'completed' : 'none',
+            playCount: currentPlays
+          }, { merge: true });
         }
       } catch (error) {
         console.error('Error saving AI Eye score:', error);
       }
     })();
-  }, [isGameOver, images.length, requestId, lobbyCode]);
+  }, [isGameOver, images.length, requestId, lobbyCode, isAdmin]);
 
   const replay = () => {
     scoreRef.current = 0;

@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import AppOverlay from './components/AppOverlay';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const Home = lazy(() => import('./pages/Home'));
@@ -11,10 +12,12 @@ const PromptWars = lazy(() => import('./pages/PromptWars'));
 const AIEye = lazy(() => import('./pages/AIEye'));
 const TechQuiz = lazy(() => import('./pages/TechQuiz'));
 const GuessImpostor = lazy(() => import('./pages/GuessImpostor'));
+const GuessTheTrivia = lazy(() => import('./pages/GuessTheTrivia'));
 const AdminGames = lazy(() => import('./pages/AdminGames'));
 const MyBadges = lazy(() => import('./pages/MyBadges'));
 const LeaderboardPreview = lazy(() => import('./pages/LeaderboardPreview'));
 const TreasureHuntPreview = lazy(() => import('./pages/TreasureHuntPreview'));
+const CodeDisplay = lazy(() => import('./pages/CodeDisplay'));
 
 function LoadingScreen() {
   return (
@@ -38,12 +41,28 @@ export default function App() {
           <Route path="/arcade/ai-eye" element={<ProtectedRoute><AIEye /></ProtectedRoute>} />
           <Route path="/arcade/tech-quiz" element={<ProtectedRoute><TechQuiz /></ProtectedRoute>} />
           <Route path="/arcade/impostor" element={<ProtectedRoute><GuessImpostor /></ProtectedRoute>} />
+          <Route path="/arcade/guess-trivia" element={
+            <ErrorBoundary>
+              <ProtectedRoute><GuessTheTrivia /></ProtectedRoute>
+            </ErrorBoundary>
+          } />
           <Route path="/credential/mybadges" element={<ProtectedRoute><MyBadges /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminGames /></ProtectedRoute>} />
           <Route path="/admingames" element={<ProtectedRoute><AdminGames /></ProtectedRoute>} />
           {/* Public display screens — no auth required */}
           <Route path="/leaderboardpreview" element={<LeaderboardPreview />} />
           <Route path="/treasurehuntpreview" element={<TreasureHuntPreview />} />
+          {/* Code display pages — bold full-screen code */}
+          <Route path="/GDGXL1" element={<CodeDisplay />} />
+          <Route path="/GDGTT1" element={<CodeDisplay />} />
+          <Route path="/GDGRP5" element={<CodeDisplay />} />
+          <Route path="/GDGFR5" element={<CodeDisplay />} />
+          <Route path="/GDGUS1" element={<CodeDisplay />} />
+          <Route path="/GDGXZ1" element={<CodeDisplay />} />
+          <Route path="/GDGMO6" element={<CodeDisplay />} />
+          <Route path="/GDGHY3" element={<CodeDisplay />} />
+          <Route path="/GDGKK9" element={<CodeDisplay />} />
+          <Route path="/GDGCA6" element={<CodeDisplay />} />
         </Routes>
       </Suspense>
     </Router>

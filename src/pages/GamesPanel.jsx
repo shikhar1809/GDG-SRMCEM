@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { Award, ChevronLeft, LogOut, Search, Zap, Brain, Eye, Keyboard, Ghost, Trophy, X } from 'lucide-react';
 
 const GAMES = [
@@ -73,6 +73,17 @@ const GAMES = [
     path: '/arcade/tech-quiz',
     openToAll: false,
   },
+  {
+    id: 'guess-the-trivia',
+    title: 'GUESS THE TRIVIA',
+    subtitle: 'Logo or Movie?',
+    description: 'See an image and guess the logo or movie shown. 5 rounds, 20s each.',
+    icon: Brain,
+    color: '#FF5722',
+    bgLight: 'bg-[#ffebee]',
+    path: '/arcade/guess-trivia',
+    openToAll: false,
+  },
 ];
 
 const containerVariants = {
@@ -94,6 +105,21 @@ export default function GamesPanel() {
   const [adminEmails, setAdminEmails] = useState([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [arcadeScores, setArcadeScores] = useState([]);
+  const [playCounts, setPlayCounts] = useState({});
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'gameRequests'), where('userId', '==', user.uid));
+    const unsubReqs = onSnapshot(q, (snap) => {
+      const counts = {};
+      snap.forEach(d => {
+        const data = d.data();
+        counts[data.gameId] = data.playCount || (data.status === 'completed' ? 1 : 0);
+      });
+      setPlayCounts(counts);
+    });
+    return () => unsubReqs();
+  }, [user]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
@@ -231,6 +257,11 @@ export default function GamesPanel() {
                   Open to All
                 </span>
               )}
+              {!isAdmin && !game.openToAll && (
+                <span className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
+                  {Math.max(0, 3 - (playCounts[game.id] || 0))} Turns Left
+                </span>
+              )}
             </motion.button>
           );
         })}
@@ -238,7 +269,7 @@ export default function GamesPanel() {
 
       {/* Version label */}
       <div className="fixed bottom-4 left-4 z-10 text-xs font-mono font-semibold select-none" style={{ color: '#9C27B0' }}>
-        v101.11
+        v101.121
       </div>
 
       {/* Leaderboard Modal */}

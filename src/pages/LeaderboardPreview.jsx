@@ -12,6 +12,7 @@ const GAMES = [
   { key: 'prompt-wars',    label: 'Prompt Wars',    color: '#FBBC04', bg: '#fef3cd', icon: Zap    },
   { key: 'ai-eye',         label: 'AI Eye',         color: '#34A853', bg: '#e6f4ea', icon: Eye    },
   { key: 'guess-impostor', label: 'Guess Impostor', color: '#9334e6', bg: '#f3e8ff', icon: Ghost  },
+  { key: 'guess-the-trivia', label: 'Guess Trivia', color: '#FF5722', bg: '#ffebee', icon: Brain  },
 ];
 
 const RANK_CONFIG = [

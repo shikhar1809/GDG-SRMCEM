@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Trophy, CheckCircle2, XCircle, RotateCcw, Play, Lightbulb } from 'lucide-react';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { updateArcadeScore } from '../utils/updateArcadeScore';
 import { TECH_RECALL_WORDS } from '../utils/gameData/techRecallData';
@@ -12,7 +12,7 @@ import { createGameRequestPayload, isApprovedForThisDevice } from '../utils/game
 const GAME_ID = 'tech-recall';
 const PASS_MARK_PCT = Math.round(PASS_MARKS['tech-recall'] * 100);
 const TOTAL_ROUNDS = 8;
-const DIFFICULTY_PROFILE = { easy: 5, medium: 2, hard: 1 };
+const DIFFICULTY_PROFILE = { easy: 6, medium: 2, hard: 0 };
 const READ_DURATION = 10;  // seconds to read the hint before input appears
 const ROUND_DURATION = 90; // seconds to guess after the reading phase
 
@@ -274,7 +274,14 @@ export default function TechRecall() {
         });
         await updateArcadeScore(user.uid, user.displayName, user.email, GAME_ID, points);
         if (requestId) {
-          await setDoc(doc(db, 'gameRequests', requestId), { status: 'completed' }, { merge: true });
+          const reqRef = doc(db, 'gameRequests', requestId);
+          const reqDoc = await getDoc(reqRef);
+          const currentPlays = (reqDoc.data()?.playCount || 0) + 1;
+          const isComplete = currentPlays >= 3 && !isAdmin;
+          await setDoc(reqRef, { 
+            status: isComplete ? 'completed' : 'none',
+            playCount: currentPlays
+          }, { merge: true });
         }
       } catch (err) {
         console.error('Error saving Tech Recall score:', err);
@@ -346,9 +353,9 @@ export default function TechRecall() {
             >
               <h1 className="text-5xl md:text-7xl font-black mb-4 text-[#4285F4]">TECH-RECALL</h1>
               <p className="text-lg text-gray-600 mb-6 leading-relaxed max-w-lg mx-auto">
-                Read the <span className="text-[#4285F4] font-bold">hint</span>, then guess the tech word
-                from the blanks. Every <span className="text-[#FBBC04] font-bold">20 seconds</span> a new
-                letter appears — but more hints means fewer points!
+                Read the <span className="text-[#4285F4] font-bold">hint</span>, then type the tech word
+                from the blanks. Up to <span className="text-[#FBBC04] font-bold">3 extra letters</span>{' '}
+                will appear over time — but using them lowers your points!
               </p>
 
               {/* How points work */}
@@ -385,7 +392,8 @@ export default function TechRecall() {
                         if (!auth.currentUser) return;
                         await setDoc(
                           doc(db, 'gameRequests', `${auth.currentUser.uid}_${GAME_ID}`),
-                          createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp)
+                          createGameRequestPayload(auth.currentUser, GAME_ID, serverTimestamp),
+                          { merge: true }
                         );
                       }}
                       className="w-full inline-flex justify-center items-center px-8 py-4 bg-[#4285F4] hover:bg-blue-600 text-white font-bold rounded-xl text-lg transition-colors shadow-lg"

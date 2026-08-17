@@ -57,14 +57,16 @@ export const arcadePointsFromRatio = (ratio, speed = 0, passMark = DEFAULT_PASS_
  * How much a player must get right before a game pays out anything.
  * Uniform 50% everywhere except AI Eye: its accuracy is already net of the
  * wrong-answer penalty, so 50% net there would mean 8 of 10 right - too steep
- * for a "win". 40% net still means 7 of 10, which is a clear pass.
+ * for a "win". 30% net means 6-7 of 10 right with a couple wrong, which is
+ * a reasonable pass for a tricky visual judgement task.
  */
 export const PASS_MARKS = {
   'tech-quiz': 0.5,
   'guess-impostor': 0.5,
   'tech-recall': 0.5,
   'prompt-wars': 0.5,
-  'ai-eye': 0.4,
+  'ai-eye': 0.3,
+  'guess-the-trivia': 0.5,
 };
 
 export const shuffleArray = (array) => {
