@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import AppOverlay from './components/AppOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import ArcadeLock from './components/ArcadeLock';
 
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const Home = lazy(() => import('./pages/Home'));
@@ -14,18 +15,13 @@ const TechQuiz = lazy(() => import('./pages/TechQuiz'));
 const GuessImpostor = lazy(() => import('./pages/GuessImpostor'));
 const GuessTheTrivia = lazy(() => import('./pages/GuessTheTrivia'));
 const AdminGames = lazy(() => import('./pages/AdminGames'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const MyBadges = lazy(() => import('./pages/MyBadges'));
 const LeaderboardPreview = lazy(() => import('./pages/LeaderboardPreview'));
 const TreasureHuntPreview = lazy(() => import('./pages/TreasureHuntPreview'));
 const CodeDisplay = lazy(() => import('./pages/CodeDisplay'));
 
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-}
+import LoadingScreen from './components/LoadingScreen';
 
 export default function App() {
   return (
@@ -34,20 +30,20 @@ export default function App() {
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/arcade" element={<ProtectedRoute><GamesPanel /></ProtectedRoute>} />
+          <Route path="/arcade" element={<ProtectedRoute><ArcadeLock><GamesPanel /></ArcadeLock></ProtectedRoute>} />
           <Route path="/mystery-hunt" element={<ProtectedRoute><MysteryHunt /></ProtectedRoute>} />
-          <Route path="/arcade/words" element={<ProtectedRoute><TechRecall /></ProtectedRoute>} />
-          <Route path="/arcade/promptwars" element={<ProtectedRoute><PromptWars /></ProtectedRoute>} />
-          <Route path="/arcade/ai-eye" element={<ProtectedRoute><AIEye /></ProtectedRoute>} />
-          <Route path="/arcade/tech-quiz" element={<ProtectedRoute><TechQuiz /></ProtectedRoute>} />
-          <Route path="/arcade/impostor" element={<ProtectedRoute><GuessImpostor /></ProtectedRoute>} />
+          <Route path="/arcade/words" element={<ProtectedRoute><ArcadeLock><TechRecall /></ArcadeLock></ProtectedRoute>} />
+          <Route path="/arcade/promptwars" element={<ProtectedRoute><ArcadeLock><PromptWars /></ArcadeLock></ProtectedRoute>} />
+          <Route path="/arcade/ai-eye" element={<ProtectedRoute><ArcadeLock><AIEye /></ArcadeLock></ProtectedRoute>} />
+          <Route path="/arcade/tech-quiz" element={<ProtectedRoute><ArcadeLock><TechQuiz /></ArcadeLock></ProtectedRoute>} />
+          <Route path="/arcade/impostor" element={<ProtectedRoute><ArcadeLock><GuessImpostor /></ArcadeLock></ProtectedRoute>} />
           <Route path="/arcade/guess-trivia" element={
             <ErrorBoundary>
-              <ProtectedRoute><GuessTheTrivia /></ProtectedRoute>
+              <ProtectedRoute><ArcadeLock><GuessTheTrivia /></ArcadeLock></ProtectedRoute>
             </ErrorBoundary>
           } />
           <Route path="/credential/mybadges" element={<ProtectedRoute><MyBadges /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AdminGames /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
           <Route path="/admingames" element={<ProtectedRoute><AdminGames /></ProtectedRoute>} />
           {/* Public display screens — no auth required */}
           <Route path="/leaderboardpreview" element={<LeaderboardPreview />} />

@@ -10,6 +10,8 @@ import 'jspdf-autotable';
 import { drawGradedSet } from '../utils/scoring';
 import { GUESS_TRIVIA_QUESTIONS } from '../utils/gameData/guessTheTriviaData';
 import { preloadImages } from '../utils/imagePreload';
+import LoadingScreen from '../components/LoadingScreen';
+import { useMinLoadTime } from '../hooks/useMinLoadTime';
 
 const SUPER_ADMINS = ['royalshikher@gmail.com', 'i.e.ishantiwari@gmail.com'];
 
@@ -17,6 +19,7 @@ export default function AdminGames() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [configLoaded, setConfigLoaded] = useState(false);
+  const displayLoading = useMinLoadTime(loading || !configLoaded, 3000);
   const [activeTab, setActiveTab] = useState('arcadeLeaderboard'); // 'arcadeLeaderboard', 'global', 'mystery', 'promptwars'
   
   // Mystery Hunt State
@@ -705,7 +708,7 @@ export default function AdminGames() {
     }
   };
 
-  if (loading || !configLoaded) return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><div className="w-16 h-16 border-4 border-[#4285F4] border-t-transparent rounded-full animate-spin"></div></div>;
+  if (displayLoading) return <LoadingScreen text="Loading Arcade Admin..." />;
 
   const isSuperAdmin = user?.email && SUPER_ADMINS.includes(user.email.toLowerCase());
   const isPlaymaker = user?.email && adminEmails.includes(user.email.toLowerCase());

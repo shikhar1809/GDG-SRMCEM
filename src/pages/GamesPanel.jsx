@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
-import { Award, ChevronLeft, LogOut, Search, Zap, Brain, Eye, Keyboard, Ghost, Trophy, X } from 'lucide-react';
+import { Award, ChevronLeft, LogOut, Search, Zap, Brain, Eye, Keyboard, Ghost, Trophy, X, Lock } from 'lucide-react';
 
 const GAMES = [
   {
@@ -121,10 +121,16 @@ export default function GamesPanel() {
     return () => unsubReqs();
   }, [user]);
 
+  const [arcadeEnabled, setArcadeEnabled] = useState(false);
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
-      if (snap.exists() && snap.data().adminEmails) {
-        setAdminEmails(snap.data().adminEmails.map(e => e.toLowerCase()));
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.adminEmails) {
+          setAdminEmails(data.adminEmails.map(e => e.toLowerCase()));
+        }
+        setArcadeEnabled(data.arcadeEnabled === true);
       }
     });
 
@@ -148,7 +154,10 @@ export default function GamesPanel() {
     };
   }, []);
 
-  const isAdmin = user && adminEmails.includes(user.email?.toLowerCase());
+  const SUPER_ADMINS = ['royalshikher@gmail.com', 'i.e.ishantiwari@gmail.com'];
+  const isAdmin = user && (adminEmails.includes(user.email?.toLowerCase()) || SUPER_ADMINS.includes(user.email?.toLowerCase()));
+
+
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans">

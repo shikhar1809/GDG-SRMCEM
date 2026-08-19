@@ -535,7 +535,7 @@ export default function MysteryHunt() {
       </AnimatePresence>
 
       <div className="absolute top-[22vh] md:top-[28vh] bottom-0 left-0 right-0 z-0 flex items-start justify-center">
-        <video autoPlay loop muted playsInline className="w-full h-full object-contain object-top">
+        <video autoPlay loop muted playsInline controls={false} disablePictureInPicture className="w-full h-full object-contain object-top pointer-events-none">
           <source src="/moving.mp4" type="video/mp4" />
         </video>
       </div>

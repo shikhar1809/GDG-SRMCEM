@@ -925,7 +925,7 @@ const GuessTheTrivia = () => {
                 {/* Remove Play Again button since Admin controls the flow */}
                 {isAdmin && (
                   <button
-                    onClick={() => navigate('/admin')}
+                    onClick={() => navigate('/admingames')}
                     className="w-full inline-flex justify-center items-center gap-2 px-6 py-4 bg-white hover:bg-gray-50 text-gray-800 rounded-xl font-bold border border-gray-200 transition-colors"
                   >
                     Go to Admin Panel

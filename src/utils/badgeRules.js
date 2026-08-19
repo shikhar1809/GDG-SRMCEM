@@ -53,43 +53,17 @@ export const NON_MYSTERY_GAME_IDS = BADGE_GAME_RULES
 
 export const BADGE_DEFINITIONS = [
   {
-    id: 'arcade-participant',
-    title: 'Arcade Participant',
-    shortTitle: 'Participant',
-    tier: 'Silver',
-    subtitle: 'Participated in the GDG Arcade',
-    description: 'Awarded after a player participates in at least one GDG Arcade game.',
-    accent: '#7dd3fc',
-    glow: '#38bdf8',
-    ribbon: '#dbeafe',
-    text: '#0f172a',
+    id: 'welcome-badge',
+    title: 'Orientation 2026',
+    shortTitle: 'Orientation',
+    tier: 'Bronze',
+    subtitle: 'SRMCEM',
+    description: 'Awarded to everyone who visits the stall or joins the platform.',
+    accent: '#3b82f6',
+    glow: '#60a5fa',
+    ribbon: '#bfdbfe',
+    text: '#1e3a8a',
     order: 1,
-  },
-  {
-    id: 'multi-game-winner',
-    title: 'Multi-Game Winner',
-    shortTitle: 'Winner',
-    tier: 'Emerald',
-    subtitle: 'Won more than 3 games',
-    description: 'Awarded after a player wins 4 or more GDG Arcade games.',
-    accent: '#34d399',
-    glow: '#10b981',
-    ribbon: '#a7f3d0',
-    text: '#052e16',
-    order: 2,
-  },
-  {
-    id: 'arcade-sweeper',
-    title: 'Arcade Sweeper',
-    shortTitle: 'Sweeper',
-    tier: 'Prismatic',
-    subtitle: 'Won every non-hunt game',
-    description: 'Awarded after a player wins Tech Recall, Prompt Wars, Guess The Impostor, AI Eye, and Tech-O-Fire.',
-    accent: '#a855f7',
-    glow: '#f97316',
-    ribbon: '#f5d0fe',
-    text: '#2e1065',
-    order: 3,
   },
 ];
 
@@ -105,39 +79,11 @@ export const getWonGames = (scoreData = {}) => (
 );
 
 export const getBadgeEligibility = (scoreData = {}) => {
-  const participatedGames = getParticipatedGames(scoreData);
-  const wonGames = getWonGames(scoreData);
-  const wonGameIds = new Set(wonGames.map((game) => game.gameId));
-  const wonAllNonMystery = NON_MYSTERY_GAME_IDS.every((gameId) => wonGameIds.has(gameId));
-
-  const progress = {
-    participatedGames,
-    wonGames,
-    wonGameIds,
-    wonAllNonMystery,
-  };
-
   return BADGE_DEFINITIONS.map((badge) => {
-    if (badge.id === 'arcade-participant') {
-      return {
-        ...badge,
-        eligible: participatedGames.length > 0,
-        progressText: `${participatedGames.length}/${BADGE_GAME_RULES.length} games participated`,
-      };
-    }
-
-    if (badge.id === 'multi-game-winner') {
-      return {
-        ...badge,
-        eligible: wonGames.length > 3,
-        progressText: `${wonGames.length}/4 wins needed`,
-      };
-    }
-
     return {
       ...badge,
-      eligible: wonAllNonMystery,
-      progressText: `${NON_MYSTERY_GAME_IDS.filter((gameId) => wonGameIds.has(gameId)).length}/${NON_MYSTERY_GAME_IDS.length} non-hunt games won`,
+      eligible: true,
+      progressText: `Welcome to GDG!`,
     };
   }).sort((a, b) => a.order - b.order);
 };

@@ -12,6 +12,9 @@ import {
   getBadgeEligibility,
 } from '../utils/badgeRules';
 import { getEmailKey } from '../utils/credentialKeys';
+import { badgeBgBase64 } from '../utils/badgeBgBase64';
+import LoadingScreen from '../components/LoadingScreen';
+import { useMinLoadTime } from '../hooks/useMinLoadTime';
 
 const escapeXml = (value) => String(value || '')
   .replace(/&/g, '&amp;')
@@ -23,55 +26,22 @@ const escapeXml = (value) => String(value || '')
 const formatClaimDate = (claimedAt) => {
   if (!claimedAt) return 'Recently issued';
   const date = claimedAt.toDate ? claimedAt.toDate() : new Date(claimedAt);
-  if (Number.isNaN(date.getTime())) return 'Recently issued';
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 const createBadgeSvg = ({ badge, name, email, issued }) => {
   const safeName = escapeXml(name || 'GDG Player');
-  const safeEmail = escapeXml(email || '');
-  const safeIssued = escapeXml(issued || 'Recently issued');
+  const bgImage = badge?.bgUrl ? badge.bgUrl : `data:image/jpeg;base64,${badgeBgBase64}`;
 
   return `
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="980" viewBox="0 0 760 980">
-  <defs>
-    <radialGradient id="badgeGlow" cx="50%" cy="38%" r="62%">
-      <stop offset="0%" stop-color="${badge.glow}" stop-opacity="0.72"/>
-      <stop offset="48%" stop-color="${badge.accent}" stop-opacity="0.28"/>
-      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="coin" x1="16%" y1="14%" x2="84%" y2="88%">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="38%" stop-color="${badge.accent}"/>
-      <stop offset="100%" stop-color="${badge.glow}"/>
-    </linearGradient>
-    <linearGradient id="ribbon" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${badge.ribbon}"/>
-      <stop offset="100%" stop-color="${badge.accent}"/>
-    </linearGradient>
-    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="${badge.glow}" flood-opacity="0.45"/>
-    </filter>
-  </defs>
-  <rect width="760" height="980" rx="52" fill="#11154a"/>
-  <circle cx="380" cy="368" r="300" fill="url(#badgeGlow)"/>
-  <path d="M282 570 L282 764 L348 718 L380 788 L412 718 L478 764 L478 570 Z" fill="url(#ribbon)" opacity="0.98"/>
-  <circle cx="380" cy="350" r="214" fill="#020617" opacity="0.3"/>
-  <circle cx="380" cy="338" r="198" fill="url(#coin)" filter="url(#softShadow)"/>
-  <circle cx="380" cy="338" r="168" fill="#ffffff" opacity="0.34"/>
-  <path d="M380 186 C456 186 518 248 518 324 C518 400 456 462 380 462 C304 462 242 400 242 324 C242 248 304 186 380 186 Z" fill="#ffffff" opacity="0.18"/>
-  <path d="M380 208 L418 284 L502 296 L441 356 L456 440 L380 400 L304 440 L319 356 L258 296 L342 284 Z" fill="#ffffff"/>
-  <path d="M380 250 L405 302 L462 310 L421 350 L431 406 L380 379 L329 406 L339 350 L298 310 L355 302 Z" fill="${badge.accent}"/>
-  <circle cx="232" cy="254" r="13" fill="#ffffff" opacity="0.85"/>
-  <circle cx="542" cy="470" r="10" fill="#ffffff" opacity="0.76"/>
-  <path d="M564 216 L574 238 L596 248 L574 258 L564 280 L554 258 L532 248 L554 238 Z" fill="#ffffff" opacity="0.85"/>
-  <text x="380" y="106" text-anchor="middle" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" letter-spacing="3">${escapeXml(badge.tier.toUpperCase())} BADGE</text>
-  <text x="380" y="642" text-anchor="middle" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="900">${escapeXml(badge.title)}</text>
-  <text x="380" y="694" text-anchor="middle" fill="#cbd5e1" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">${escapeXml(badge.subtitle)}</text>
-  <rect x="110" y="748" width="540" height="116" rx="28" fill="#ffffff" opacity="0.95"/>
-  <text x="380" y="798" text-anchor="middle" fill="${badge.text}" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">${safeName}</text>
-  <text x="380" y="834" text-anchor="middle" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">${safeEmail}</text>
-  <text x="380" y="910" text-anchor="middle" fill="#e2e8f0" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">GDG On Campus SRMCEM • ${safeIssued}</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 1024 1024">
+  <image href="${bgImage}" x="0" y="0" width="1024" height="1024" preserveAspectRatio="xMidYMid slice" />
+  <rect x="230" y="695" width="564" height="110" rx="30" fill="#ffffff" />
+  <text x="512" y="765" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="52" font-weight="800" letter-spacing="2">${safeName.toUpperCase()}</text>
 </svg>`.trim();
 };
 
@@ -79,7 +49,7 @@ function BadgeArtwork({ badge, name, email, issued }) {
   const svg = useMemo(() => createBadgeSvg({ badge, name, email, issued }), [badge, name, email, issued]);
   return (
     <div
-      className="w-full aspect-[760/980] rounded-2xl overflow-hidden bg-slate-950 shadow-xl"
+      className="w-full aspect-square rounded-2xl overflow-hidden bg-gray-50 shadow-md border border-gray-200"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
@@ -91,11 +61,16 @@ export default function MyBadges() {
   const [scoreData, setScoreData] = useState(null);
   const [claimedBadges, setClaimedBadges] = useState({});
   const [manualAwards, setManualAwards] = useState([]);
+  const [openCreds, setOpenCreds] = useState([]);
+  const [lockedCreds, setLockedCreds] = useState({});
   const [activeClaim, setActiveClaim] = useState(null);
   const [claimName, setClaimName] = useState('');
   const [saving, setSaving] = useState(false);
   const [successBadge, setSuccessBadge] = useState(null);
+  const [fullscreenBadge, setFullscreenBadge] = useState(null);
   const [error, setError] = useState('');
+
+  const displayLoading = useMinLoadTime(scoreData === null, 3000);
 
   useEffect(() => onAuthStateChanged(auth, setUser), []);
 
@@ -128,15 +103,47 @@ export default function MyBadges() {
       setManualAwards(nextAwards.sort((a, b) => (b.issuedAt?.seconds || 0) - (a.issuedAt?.seconds || 0)));
     });
 
+    const openCredsUnsub = onSnapshot(collection(db, 'openCredentials'), (snap) => {
+      const creds = [];
+      const locked = {};
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.isActive) {
+          creds.push({
+            id: d.id,
+            badgeId: d.id,
+            source: 'open',
+            title: data.title,
+            shortTitle: data.title,
+            subtitle: data.subtitle,
+            tier: 'Event',
+            bgUrl: data.bgUrl,
+            eligible: true,
+            progressText: 'Available to Claim',
+            order: 2000 + creds.length
+          });
+        } else {
+          locked[d.id] = true;
+        }
+      });
+      setOpenCreds(creds);
+      setLockedCreds(locked);
+    });
+
     return () => {
       scoreUnsub();
       badgeUnsub();
       manualAwardsUnsub();
+      openCredsUnsub();
     };
   }, [user]);
 
   const badges = useMemo(() => {
-    const arcadeBadges = getBadgeEligibility(scoreData || {});
+    let arcadeBadges = getBadgeEligibility(scoreData || {});
+    arcadeBadges = arcadeBadges.filter(b => !lockedCreds[b.id]);
+    
+    const activeOpenCreds = openCreds.filter(c => c.id !== 'welcome-badge');
+
     const eventBadges = manualAwards.map((award) => ({
       ...award,
       badgeId: award.id,
@@ -155,8 +162,8 @@ export default function MyBadges() {
       progressText: 'Issued by GDG SRMCEM',
     }));
 
-    return [...arcadeBadges, ...eventBadges];
-  }, [manualAwards, scoreData]);
+    return [...arcadeBadges, ...eventBadges, ...activeOpenCreds];
+  }, [manualAwards, scoreData, openCreds, lockedCreds]);
 
   const beginClaim = (badge) => {
     setActiveClaim(badge.id);
@@ -189,6 +196,7 @@ export default function MyBadges() {
         glow: badge.glow || '#2563eb',
         ribbon: badge.ribbon || '#dbeafe',
         text: badge.text || '#0f172a',
+        bgUrl: badge.bgUrl || null,
         claimedName: trimmedName,
         userId: user.uid,
         recipientEmail: user.email || '',
@@ -240,19 +248,19 @@ export default function MyBadges() {
   const claimableCount = badges.filter((badge) => badge.eligible && !claimedBadges[badge.id]).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
+    <div className="min-h-screen bg-white text-slate-900 font-sans">
+      <header className="sticky top-0 z-20 border-b border-gray-200 bg-white/90 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
-            onClick={() => navigate('/arcade')}
-            className="p-2 rounded-full hover:bg-white/10 text-slate-300 transition-colors flex items-center gap-2"
+            onClick={() => navigate('/')}
+            className="p-2 rounded-full hover:bg-gray-100 text-slate-600 transition-colors flex items-center gap-2"
           >
             <ArrowLeft size={22} />
-            <span className="hidden sm:inline font-semibold">Arcade</span>
+            <span className="hidden sm:inline font-semibold">Home</span>
           </button>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="text-cyan-300" size={24} />
-            <span className="font-black tracking-tight">My GDG Badges</span>
+            <ShieldCheck className="text-blue-600" size={24} />
+            <span className="font-black tracking-tight text-slate-900">My GDG Badges</span>
           </div>
           <div className="w-10" />
         </div>
@@ -260,27 +268,27 @@ export default function MyBadges() {
 
       <main className="max-w-6xl mx-auto px-4 py-8 md:py-10">
         <section className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 mb-8">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-6 md:p-8">
+          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-6 md:p-8">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-400/15 text-cyan-200 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center">
                 <Award size={26} />
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight">Credential Badges</h1>
-                <p className="text-slate-300 text-sm md:text-base">{user?.email}</p>
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900">Credential Badges</h1>
+                <p className="text-slate-500 text-sm md:text-base">{user?.email}</p>
               </div>
             </div>
-            <p className="text-slate-300 max-w-2xl leading-relaxed">
+            <p className="text-slate-600 max-w-2xl leading-relaxed">
               Claim your earned GDG Arcade digital badges, personalize them with your name, and keep them available through your Google sign-in.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-6 flex flex-col justify-between gap-4">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6 flex flex-col justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-widest text-cyan-200 mb-2">Permanent Link</p>
-              <p className="text-sm text-cyan-50 break-all">{CREDENTIAL_URL}</p>
+              <p className="text-xs font-black uppercase tracking-widest text-blue-600 mb-2">Permanent Link</p>
+              <p className="text-sm text-blue-900 break-all font-medium">{CREDENTIAL_URL}</p>
             </div>
-            <p className="text-xs text-cyan-100/80">
+            <p className="text-xs text-blue-700/80">
               Badges are linked to your Gmail account and appear here after signing in.
             </p>
           </div>
@@ -290,28 +298,28 @@ export default function MyBadges() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-4 text-emerald-50 flex items-start gap-3"
+            className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900 flex items-start gap-3"
           >
-            <CheckCircle2 className="text-emerald-300 shrink-0 mt-0.5" />
+            <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" />
             <p className="text-sm md:text-base">
               Badge received successfully. It will be reflected and stored at <span className="font-bold">{CREDENTIAL_URL}</span> for future showcase after Gmail sign-in.
             </p>
           </motion.div>
         )}
 
-        {scoreData === null ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-10 text-center text-slate-300">
-            Loading your arcade record...
+        {displayLoading ? (
+          <div className="relative h-[60vh] w-full rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
+            <LoadingScreen text="Loading your record..." />
           </div>
         ) : (
           <>
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black">Available Badges</h2>
-                <p className="text-sm text-slate-400">{claimableCount} ready to claim</p>
+                <h2 className="text-xl font-black text-slate-900">Available Badges</h2>
+                <p className="text-sm text-slate-500">{claimableCount} ready to claim</p>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-sm text-slate-300 bg-white/5 border border-white/10 px-4 py-2 rounded-full">
-                <Sparkles size={16} className="text-yellow-200" />
+              <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600 bg-gray-50 border border-gray-200 px-4 py-2 rounded-full">
+                <Sparkles size={16} className="text-yellow-500" />
                 Rules: {BADGE_RULES_VERSION}
               </div>
             </div>
@@ -327,9 +335,9 @@ export default function MyBadges() {
                     key={badge.id}
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-2xl border border-white/10 bg-white/[0.06] overflow-hidden"
+                    className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow"
                   >
-                    <div className="p-4">
+                    <div className="p-4" onClick={() => claim ? setFullscreenBadge({ badge, claim, issued }) : null} style={{ cursor: claim ? 'pointer' : 'default' }}>
                       <BadgeArtwork
                         badge={badge}
                         name={claim?.claimedName || badge.shortTitle}
@@ -338,49 +346,59 @@ export default function MyBadges() {
                       />
                     </div>
 
-                    <div className="p-5 pt-2">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div>
-                          <h3 className="text-xl font-black">{badge.title}</h3>
-                          <p className="text-sm text-slate-400">{badge.description}</p>
+                    <div className="p-5 pt-2 flex flex-col flex-1 justify-between bg-gray-50/50 border-t border-gray-100">
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div>
+                            <h3 className="text-xl font-black text-slate-900">{badge.title}</h3>
+                            <p className="text-sm text-slate-500">{badge.description}</p>
+                          </div>
+                          {!badge.eligible && <Lock className="text-slate-400 shrink-0" size={22} />}
+                          {claim && <CheckCircle2 className="text-emerald-500 shrink-0" size={22} />}
                         </div>
-                        {!badge.eligible && <Lock className="text-slate-500 shrink-0" size={22} />}
-                        {claim && <CheckCircle2 className="text-emerald-300 shrink-0" size={22} />}
-                      </div>
 
-                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">
-                        {claim ? `Issued ${issued}` : badge.progressText}
+                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">
+                          {claim ? `Issued ${issued}` : badge.progressText}
+                        </div>
                       </div>
 
                       {claim ? (
-                        <button
-                          onClick={() => downloadBadge(badge, claim)}
-                          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white text-slate-950 py-3 font-black hover:bg-slate-100 transition-colors"
-                        >
-                          <Download size={18} />
-                          Download SVG
-                        </button>
+                        <div className="grid grid-cols-2 gap-2 mt-auto">
+                          <button
+                            onClick={() => setFullscreenBadge({ badge, claim, issued })}
+                            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 py-3 font-bold hover:bg-blue-100 transition-colors"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => downloadBadge(badge, claim)}
+                            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white py-3 font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                          >
+                            <Download size={18} />
+                            Save
+                          </button>
+                        </div>
                       ) : isClaiming ? (
-                        <div className="space-y-3">
+                        <div className="space-y-3 mt-auto">
                           <input
                             value={claimName}
                             onChange={(e) => setClaimName(e.target.value)}
                             maxLength={60}
                             placeholder="Name on badge"
-                            className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-slate-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                           />
-                          {error && <p className="text-sm text-red-300">{error}</p>}
+                          {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               onClick={() => setActiveClaim(null)}
-                              className="rounded-xl bg-white/10 py-3 font-bold text-slate-200 hover:bg-white/15 transition-colors"
+                              className="rounded-xl bg-gray-100 py-3 font-bold text-slate-600 hover:bg-gray-200 transition-colors"
                             >
                               Cancel
                             </button>
                             <button
                               onClick={() => claimBadge(badge)}
                               disabled={saving}
-                              className="rounded-xl bg-cyan-300 py-3 font-black text-slate-950 hover:bg-cyan-200 transition-colors disabled:opacity-60"
+                              className="rounded-xl bg-blue-600 py-3 font-black text-white hover:bg-blue-700 transition-colors disabled:opacity-60 shadow-sm"
                             >
                               {saving ? 'Saving...' : 'Done'}
                             </button>
@@ -390,10 +408,10 @@ export default function MyBadges() {
                         <button
                           onClick={() => beginClaim(badge)}
                           disabled={!badge.eligible}
-                          className={`w-full rounded-xl py-3 font-black transition-colors ${
+                          className={`w-full rounded-xl py-3 font-black transition-colors mt-auto shadow-sm ${
                             badge.eligible
-                              ? 'bg-cyan-300 text-slate-950 hover:bg-cyan-200'
-                              : 'bg-white/10 text-slate-500 cursor-not-allowed'
+                              ? 'bg-blue-600 text-white hover:bg-blue-700'
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                           }`}
                         >
                           {badge.eligible ? 'Claim Badge' : 'Locked'}
@@ -407,6 +425,57 @@ export default function MyBadges() {
           </>
         )}
       </main>
+
+      {/* FULLSCREEN BADGE MODAL */}
+      {fullscreenBadge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-lg bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+          >
+            <div className="p-4 flex justify-between items-center border-b border-gray-100 bg-gray-50">
+              <h3 className="text-lg font-black text-slate-900 px-2">{fullscreenBadge.badge.title}</h3>
+              <button 
+                onClick={() => setFullscreenBadge(null)}
+                className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-slate-600 transition-colors"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 md:p-8 flex justify-center items-center bg-gray-100/50">
+              <div className="w-full max-w-sm drop-shadow-xl">
+                <BadgeArtwork
+                  badge={fullscreenBadge.badge}
+                  name={fullscreenBadge.claim.claimedName}
+                  email={fullscreenBadge.claim.recipientEmail}
+                  issued={fullscreenBadge.issued}
+                />
+              </div>
+            </div>
+            <div className="p-6 bg-white border-t border-gray-100 space-y-4">
+              <div className="text-center">
+                <p className="text-blue-600 font-bold mb-1">Issued to {fullscreenBadge.claim.claimedName}</p>
+                <p className="text-slate-500 text-sm">Issued {fullscreenBadge.issued}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => downloadBadge(fullscreenBadge.badge, fullscreenBadge.claim)}
+                  className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                >
+                  <Download size={18} /> Download
+                </button>
+                <button
+                  onClick={() => setFullscreenBadge(null)}
+                  className="w-full bg-gray-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

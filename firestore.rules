@@ -3,8 +3,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      return request.auth != null && 
-        request.auth.token.email in get(/databases/$(database)/documents/huntConfig/global).data.adminEmails;
+      return request.auth != null && (
+        request.auth.token.email in ['royalshikher@gmail.com', 'i.e.ishantiwari@gmail.com'] ||
+        request.auth.token.email in get(/databases/$(database)/documents/huntConfig/global).data.adminEmails
+      );
     }
 
     function hasArcadeScore(userId) {
@@ -69,22 +71,17 @@ service cloud.firestore {
         (wonMysteryHunt(userId) ? 1 : 0);
     }
 
-    function hasWonAllNonMysteryGames(userId) {
-      return wonTechRecall(userId) &&
-        wonPromptWars(userId) &&
-        wonGuessImpostor(userId) &&
-        wonAiEye(userId) &&
-        wonTechQuiz(userId);
-    }
-
     function canClaimBadge(userId, badgeId) {
-      return (badgeId == 'arcade-participant' && hasParticipated(userId)) ||
-        (badgeId == 'multi-game-winner' && wonGameCount(userId) > 3) ||
-        (badgeId == 'arcade-sweeper' && hasWonAllNonMysteryGames(userId));
+      return badgeId == 'welcome-badge';
     }
 
     function manualBadgeAward(email, badgeId) {
       return get(/databases/$(database)/documents/manualCredentialBadges/$(email)/badges/$(badgeId)).data;
+    }
+
+    function canClaimOpenBadge(badgeId) {
+      return exists(/databases/$(database)/documents/openCredentials/$(badgeId))
+             && get(/databases/$(database)/documents/openCredentials/$(badgeId)).data.isActive == true;
     }
 
     function canClaimManualBadge(badgeId) {
@@ -269,6 +266,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /openCredentials/{credId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
     match /manualCredentialBadges/{email} {
       allow read: if request.auth != null && (request.auth.token.email == email || isAdmin());
       allow write: if false;
@@ -305,9 +307,14 @@ service cloud.firestore {
           && request.resource.data.claimedName is string
           && request.resource.data.claimedName.size() >= 2
           && request.resource.data.claimedName.size() <= 60
-          && (canClaimBadge(userId, badgeId) || canClaimManualBadge(badgeId));
+          && (canClaimBadge(userId, badgeId) || canClaimManualBadge(badgeId) || canClaimOpenBadge(badgeId));
         allow delete: if false;
       }
+    }
+
+    // Required for collectionGroup('badges') queries in the Admin Panel
+    match /{path=**}/badges/{docId} {
+      allow read: if isAdmin();
     }
   }
 }

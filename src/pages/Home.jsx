@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code2, Globe, Rocket, Users, Target, MessageSquare, X, Compass } from 'lucide-react';
+import { Code2, Globe as GlobeIcon, Rocket, Users, Target, MessageSquare, X, Compass, Calendar, Award } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import TextLoop from '../components/TextLoop';
+import { db } from '../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { Globe } from '../components/ui/globe';
 
 const TEAM = [
   { name: 'Priyam Srivastava', role: 'Organizer (Lead)' },
@@ -30,6 +33,20 @@ const techLogos = [
 export default function Home() {
   const navigate = useNavigate();
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showEventsModal, setShowEventsModal] = useState(false);
+  const [arcadeEnabled, setArcadeEnabled] = useState(false);
+  const [eventsCatalog, setEventsCatalog] = useState([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setArcadeEnabled(data.arcadeEnabled === true);
+        setEventsCatalog(data.eventsCatalog || []);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white selection:bg-[#4285F4]/20">
@@ -46,8 +63,9 @@ export default function Home() {
 
         {/* Flashing GDG Arcade Button */}
         <div className="flex justify-center flex-[1.5] md:flex-1">
-          <motion.button
-            onClick={() => navigate('/arcade')}
+          {arcadeEnabled && (
+            <motion.button
+              onClick={() => navigate('/arcade')}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="relative group rounded-full p-[2px] md:p-[3px] overflow-hidden shadow-[0_0_10px_rgba(66,133,244,0.15)] hover:shadow-[0_0_15px_rgba(66,133,244,0.3)] transition-all duration-300"
@@ -72,9 +90,61 @@ export default function Home() {
               </span>
             </div>
           </motion.button>
+          )}
         </div>
 
-        <div className="flex justify-end flex-1">
+        <div className="flex justify-end flex-1 items-center gap-2 md:gap-3">
+          
+          {/* Event Catalog Button (Nav) */}
+          <motion.button
+            onClick={() => setShowEventsModal(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2.5 bg-white border border-gray-200 rounded-full shadow-sm hover:border-blue-200 hover:shadow-md transition-all duration-300"
+          >
+            <motion.div
+              animate={{ rotate: [-8, 8, -8] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="text-[#4285F4]"
+            >
+              <Calendar size={16} strokeWidth={2.5} className="md:w-5 md:h-5" />
+            </motion.div>
+            <span className="font-semibold text-gray-800 text-xs md:text-sm hidden lg:inline">Event Catalog</span>
+            <span className="font-semibold text-gray-800 text-xs md:text-sm lg:hidden hidden sm:inline">Events</span>
+          </motion.button>
+
+          {/* My Badges Button (Nav) */}
+          <Link to="/credential/mybadges">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative overflow-hidden flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2.5 bg-[#FFF8E1] border border-[#FFE082] rounded-full shadow-sm hover:shadow-md transition-all duration-300 group"
+            >
+              {/* Golden Badge Icon (Non-generic) */}
+              <div className="relative flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-sm md:w-5 md:h-5">
+                  <path d="M12 1L15.09 7.26L22 8.27L17 13.14L18.18 20.02L12 16.77L5.82 20.02L7 13.14L2 8.27L8.91 7.26L12 1Z" fill="url(#goldGradNav)" stroke="#F59E0B" strokeWidth="1.5" strokeLinejoin="round"/>
+                  <circle cx="12" cy="12" r="3.5" fill="#FFFBEB" opacity="0.9"/>
+                  <defs>
+                    <linearGradient id="goldGradNav" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#FDE047" />
+                      <stop offset="0.5" stopColor="#F59E0B" />
+                      <stop offset="1" stopColor="#D97706" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <span className="font-semibold text-[#D97706] text-xs md:text-sm hidden sm:inline whitespace-nowrap">My Badges</span>
+              
+              {/* Periodic Shine Overlay */}
+              <motion.div
+                animate={{ x: ["-150%", "200%", "200%"] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                className="absolute top-0 bottom-0 left-0 w-12 bg-gradient-to-r from-transparent via-white/60 to-transparent skew-x-[-20deg]"
+              />
+            </motion.button>
+          </Link>
+
           <button 
             onClick={() => setShowJoinModal(true)}
             className="bg-[#4285F4] hover:bg-[#3367d6] text-white px-4 md:px-6 py-1.5 md:py-2.5 rounded-full font-medium transition-colors shadow-sm shadow-blue-200 text-xs md:text-sm whitespace-nowrap"
@@ -85,21 +155,29 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-24 md:pt-24 pb-16 md:pb-12 px-4 md:px-6 overflow-hidden">
+      <section className="relative pt-0 pb-16 md:pb-12 px-0 md:px-6 overflow-hidden">
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] md:w-[800px] h-[300px] md:h-[400px] bg-gradient-to-tr from-[#e8f0fe] via-white to-[#fce8e6] opacity-50 rounded-[100%] blur-3xl -z-10" />
         
-        <div className="max-w-5xl mx-auto text-center flex justify-center">
+        <div className="w-full md:max-w-7xl mx-auto text-center flex justify-center bg-[#e2dcd3] md:bg-transparent rounded-b-3xl md:rounded-none">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="w-full mt-10 md:mt-0"
+            className="w-full flex flex-col items-center"
           >
-            <img 
-              src="/hero.png" 
-              alt="GDG On Campus SRMCEM Hero" 
-              className="w-full h-auto object-contain rounded-2xl shadow-sm"
+            <video 
+              src="/gdg_srmcem_banner_reveal.mp4"
+              poster="/hero.png"
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              controls={false}
+              disablePictureInPicture
+              preload="auto"
+              className="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"
+              style={{ backgroundColor: '#e2dcd3' }}
             />
           </motion.div>
         </div>
@@ -121,8 +199,8 @@ export default function Home() {
               className="w-32 md:w-48 h-auto object-contain"
             />
             <div className="flex flex-col items-center text-center">
-              <div className="bg-white rounded-full p-4 mb-4 border border-gray-100 shadow-sm">
-                <Globe size={120} strokeWidth={2.5} className="text-[#4285F4]" />
+              <div className="bg-white rounded-full p-4 mb-4 border border-gray-100 shadow-sm w-40 h-40 flex items-center justify-center overflow-hidden">
+                <Globe />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 leading-tight">
                 Amplify Your <br/>
@@ -196,7 +274,7 @@ export default function Home() {
               className="bg-white rounded-[2rem] p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow"
             >
               <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[#fce8e6] rounded-full filter blur-3xl opacity-50 group-hover:scale-110 transition duration-700 -z-10" />
-              <Globe className="text-[#EA4335] mb-4 md:mb-6" size={32} />
+              <GlobeIcon className="text-[#EA4335] mb-4 md:mb-6" size={32} />
               <h3 className="text-xl font-bold text-gray-900 mb-2 md:mb-3">Global Network</h3>
               <p className="text-gray-500 text-sm md:text-base leading-relaxed">Connect with millions of developers across the globe.</p>
             </motion.div>
@@ -306,15 +384,24 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-50 border-t border-gray-200 py-12 px-6 text-center">
-        <div className="max-w-6xl mx-auto flex flex-col items-center">
-          <img 
-            src="/gdg_logo.png" 
-            alt="GDG Logo" 
-            className="w-10 h-10 object-contain mb-4 grayscale opacity-50"
-          />
-          <p className="text-gray-500 font-medium">Google Developer Groups on Campus SRMCEM</p>
-          <p className="text-gray-400 text-sm mt-2">© {new Date().getFullYear()} All rights reserved.</p>
+      <footer className="relative bg-white border-t border-gray-200 py-8 md:py-10 px-6 text-center overflow-hidden flex flex-col justify-center">
+        {/* Background Image Overlay */}
+        <div 
+          className="absolute inset-0 z-0 bg-center bg-cover bg-no-repeat"
+          style={{ backgroundImage: 'url("/footer.jpg")' }}
+        />
+        
+        <div className="max-w-6xl mx-auto flex flex-col items-center relative z-10 w-full mt-2">
+          <div className="bg-white/95 p-5 md:px-10 rounded-2xl border-[3px] border-gray-800 shadow-md flex flex-col items-center">
+            <img 
+              src="/gdg_logo.png" 
+              alt="GDG Logo" 
+              className="w-10 h-10 object-contain mb-3"
+            />
+            <p className="text-gray-900 font-bold text-lg md:text-xl">Google Developer Groups on Campus</p>
+            <p className="text-[#4285F4] font-black tracking-wide mt-1">SRMCEM</p>
+            <p className="text-gray-600 text-xs mt-3 font-semibold">© {new Date().getFullYear()} All rights reserved.</p>
+          </div>
         </div>
       </footer>
 
@@ -387,6 +474,66 @@ export default function Home() {
                   </div>
                   <span className="font-semibold text-gray-700 group-hover:text-indigo-600">Discord</span>
                 </a>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Event Catalog Modal */}
+        {showEventsModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-[2rem] p-6 md:p-8 w-full max-w-lg shadow-2xl relative max-h-[90vh] flex flex-col"
+            >
+              <button 
+                onClick={() => setShowEventsModal(false)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="text-center mb-6 shrink-0">
+                <div className="w-16 h-16 bg-[#e8f0fe] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="text-[#4285F4]" size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Event Catalog</h2>
+                <p className="text-gray-500 text-sm">Upcoming events from GDG SRMCEM</p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2 pb-2 space-y-4">
+                {eventsCatalog.length > 0 ? (
+                  eventsCatalog.map((event) => (
+                    <div key={event.id} className="bg-gray-50 border border-gray-100 p-5 rounded-2xl flex flex-col gap-3">
+                      {event.imageLink && (
+                        <div className="w-full aspect-video rounded-xl overflow-hidden mb-1 bg-gray-200">
+                          <img src={event.imageLink} alt={event.title} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-900 leading-tight">{event.title}</h3>
+                        <p className="text-sm font-medium text-gray-500 mt-1">{event.date}</p>
+                      </div>
+                      {event.link && (
+                        <a 
+                          href={event.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center bg-[#4285F4] hover:bg-[#3367d6] text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm self-start"
+                        >
+                          Details &amp; Registration
+                        </a>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-10 px-4 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
+                    <p className="text-gray-500 font-medium">No upcoming events listed at the moment.</p>
+                    <p className="text-sm text-gray-400 mt-2">Check back soon or join our community for updates!</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

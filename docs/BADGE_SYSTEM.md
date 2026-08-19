@@ -92,23 +92,15 @@ Current implementation:
 - Mystery Hunt counts as won when `score_mystery-hunt >= 75`, meaning the player has claimed at least one hunt level.
 - The badge unlocks when the player has 4 or more wins.
 
-### Arcade Sweeper
+### Welcome Badge
 
 Eligibility:
 
-- The player has won all games except Mystery Hunt.
-
-Required games:
-
-- Tech Recall
-- Prompt Wars
-- Guess The Impostor
-- AI Eye
-- Tech-O-Fire
+- Awarded to everyone who visits the stall or joins the platform.
 
 Current implementation:
 
-- Each required game counts as won when its best score is greater than or equal to `1`.
+- Claimable by any user.
 
 ## Rule Versioning
 

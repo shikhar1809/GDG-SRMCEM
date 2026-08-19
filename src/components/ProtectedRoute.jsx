@@ -2,11 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { auth, googleProvider } from '../firebase';
 import { getRedirectResult, onAuthStateChanged, signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { flushPendingArcadeScores } from '../utils/updateArcadeScore';
+import LoadingScreen from './LoadingScreen';
+import { useMinLoadTime } from '../hooks/useMinLoadTime';
 
 export default function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+
+  const displayLoading = useMinLoadTime(loading, 3000);
 
   useEffect(() => {
     getRedirectResult(auth).catch((error) => {
@@ -51,12 +55,8 @@ export default function ProtectedRoute({ children }) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+  if (displayLoading) {
+    return <LoadingScreen text="Loading Arcade..." />;
   }
 
   if (!user) {
