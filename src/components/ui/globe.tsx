@@ -61,7 +61,7 @@ export function Globe({ className = "" }: { className?: string }) {
       })
       
       function animate() {
-        phi += 0.003
+        phi += 0.01 // Increased speed based on user feedback
         globe!.update({
           phi: phi,
           theta: 0.2,

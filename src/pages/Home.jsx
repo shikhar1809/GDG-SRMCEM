@@ -175,21 +175,25 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="w-full flex flex-col items-center"
           >
-            <video 
-              src="/gdg_srmcem_banner_reveal.mp4"
-              poster="/hero.png"
-              autoPlay 
-              loop 
-              muted 
-              playsInline
-              disablePictureInPicture
-              disableRemotePlayback
-              preload="auto"
-              onCanPlay={(e) => {
-                e.target.play().catch(() => {});
+            <div 
+              dangerouslySetInnerHTML={{
+                __html: `
+                  <video 
+                    src="/gdg_srmcem_banner_reveal.mp4"
+                    poster="/hero.png"
+                    autoplay 
+                    loop 
+                    muted 
+                    playsinline
+                    disablepictureinpicture
+                    disableremoteplayback
+                    preload="auto"
+                    class="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"
+                    style="background-color: #e2dcd3;"
+                  ></video>
+                `
               }}
-              className="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"
-              style={{ backgroundColor: '#e2dcd3' }}
+              className="w-full"
             />
           </motion.div>
         </div>
