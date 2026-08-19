@@ -144,20 +144,11 @@ export function Globe({ className = "" }: { className?: string }) {
       />
       {/* GDG Overlay Logo in bottom right */}
       <div className="absolute -bottom-1 -right-1 w-10 h-10 md:w-12 md:h-12 bg-white rounded-full shadow-md flex items-center justify-center pointer-events-none z-10 border border-gray-100">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 md:w-7 md:h-7 ml-0.5">
-          <path d="M10 5L3 12L10 19" stroke="url(#leftGradient)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M14 5L21 12L14 19" stroke="url(#rightGradient)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-          <defs>
-            <linearGradient id="leftGradient" x1="10" y1="5" x2="10" y2="19" gradientUnits="userSpaceOnUse">
-              <stop offset="50%" stopColor="#EA4335" /> {/* Red */}
-              <stop offset="50%" stopColor="#4285F4" /> {/* Blue */}
-            </linearGradient>
-            <linearGradient id="rightGradient" x1="14" y1="5" x2="14" y2="19" gradientUnits="userSpaceOnUse">
-              <stop offset="50%" stopColor="#34A853" /> {/* Green */}
-              <stop offset="50%" stopColor="#FBBC04" /> {/* Yellow */}
-            </linearGradient>
-          </defs>
-        </svg>
+        <img 
+          src="/gdg_logo.png" 
+          alt="GDG Logo" 
+          className="w-5 h-5 md:w-6 md:h-6 object-contain"
+        />
       </div>
     </div>
   )
