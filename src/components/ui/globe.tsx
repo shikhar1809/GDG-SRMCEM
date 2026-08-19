@@ -86,7 +86,7 @@ export function Globe({ className = "" }: { className?: string }) {
         diffuse: 1.2,
         mapSamples: 16000, 
         mapBrightness: 6,
-        baseColor: [0.258, 0.521, 0.956], // #4285F4 (Google Blue)
+        baseColor: [1, 1, 1], // White dots
         markerColor: [1, 1, 1], // White markers
         glowColor: [1, 1, 1],
         markerElevation: 0.05,
@@ -128,22 +128,23 @@ export function Globe({ className = "" }: { className?: string }) {
   }, [])
 
   return (
-    <div className={`relative aspect-square select-none flex items-center justify-center ${className}`}>
-      {/* Background circle to simulate the solid blue sphere from the video */}
-      <div className="absolute inset-0 m-auto w-[98%] h-[98%] rounded-full bg-[#8ab4f8] opacity-80" />
+    <div className={`relative aspect-square select-none flex items-center justify-center w-full h-full ${className}`}>
+      {/* Background circle to simulate the solid blue sphere. Screen mode turns black globe into transparent! */}
+      <div className="absolute inset-0 m-auto w-[92%] h-[92%] rounded-full bg-[#4285F4]" />
       <canvas
         ref={canvasRef}
         onPointerDown={handlePointerDown}
         style={{
           position: "relative",
           zIndex: 1,
+          mixBlendMode: "screen", // Makes the black sphere transparent, showing the blue circle behind
           width: "100%", height: "100%", cursor: "grab", opacity: 0,
           transition: "opacity 1.2s ease", borderRadius: "50%", touchAction: "none",
         }}
       />
       {/* GDG Overlay Logo in bottom right */}
-      <div className="absolute -bottom-2 -right-2 md:bottom-2 md:right-2 w-16 h-16 md:w-20 md:h-20 bg-white rounded-full shadow-lg flex items-center justify-center pointer-events-none z-10 border border-gray-100">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 md:w-12 md:h-12 ml-1">
+      <div className="absolute -bottom-1 -right-1 w-10 h-10 md:w-12 md:h-12 bg-white rounded-full shadow-md flex items-center justify-center pointer-events-none z-10 border border-gray-100">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 md:w-7 md:h-7 ml-0.5">
           <path d="M10 5L3 12L10 19" stroke="url(#leftGradient)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M14 5L21 12L14 19" stroke="url(#rightGradient)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
           <defs>
@@ -161,3 +162,4 @@ export function Globe({ className = "" }: { className?: string }) {
     </div>
   )
 }
+

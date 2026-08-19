@@ -199,7 +199,7 @@ export default function Home() {
               className="w-32 md:w-48 h-auto object-contain"
             />
             <div className="flex flex-col items-center text-center">
-              <div className="bg-white rounded-full p-4 mb-4 border border-gray-100 shadow-sm w-40 h-40 flex items-center justify-center overflow-hidden">
+              <div className="bg-white rounded-full p-4 mb-4 border border-gray-100 shadow-sm w-40 h-40 flex items-center justify-center relative">
                 <Globe />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 leading-tight">
