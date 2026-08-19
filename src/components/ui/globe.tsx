@@ -40,13 +40,13 @@ export function Globe({ className = "" }: { className?: string }) {
       ]
 
       globe = createGlobe(canvas, {
-        devicePixelRatio: 2, // Use 2 for sharpness, but control performance with mapSamples
-        width: width * 2,
-        height: width * 2,
+        devicePixelRatio: 1, // Keep pixel ratio at 1 for consistent high performance on mobile
+        width: width,
+        height: width,
         phi: 0, theta: 0.2, 
         dark: 0, 
         diffuse: 1.2,
-        mapSamples: 12000, // Restored to a decent amount since we removed the expensive CSS invert
+        mapSamples: 4000, // Reduced from 12000 to save CPU/GPU on mobile devices
         mapBrightness: 6,
         baseColor: [0.258, 0.521, 0.956], // Google Blue
         markerColor: [1, 1, 1], // White
