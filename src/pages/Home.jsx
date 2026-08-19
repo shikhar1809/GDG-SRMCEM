@@ -156,6 +156,10 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative pt-0 pb-16 md:pb-12 px-0 md:px-6 overflow-hidden">
+        <style>{`
+          video::-webkit-media-controls { display: none !important; }
+          video::-webkit-media-controls-start-playback-button { display: none !important; }
+        `}</style>
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] md:w-[800px] h-[300px] md:h-[400px] bg-gradient-to-tr from-[#e8f0fe] via-white to-[#fce8e6] opacity-50 rounded-[100%] blur-3xl -z-10" />
         
@@ -173,7 +177,6 @@ export default function Home() {
               loop 
               muted 
               playsInline
-              controls={false}
               disablePictureInPicture
               preload="auto"
               className="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"

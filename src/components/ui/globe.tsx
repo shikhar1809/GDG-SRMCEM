@@ -5,45 +5,6 @@ import createGlobe from "cobe"
 
 export function Globe({ className = "" }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const pointerInteracting = useRef<{ x: number; y: number } | null>(null)
-  const dragOffset = useRef({ phi: 0, theta: 0 })
-  const phiOffsetRef = useRef(0)
-  const thetaOffsetRef = useRef(0)
-  const isPausedRef = useRef(false)
-
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    pointerInteracting.current = { x: e.clientX, y: e.clientY }
-    if (canvasRef.current) canvasRef.current.style.cursor = "grabbing"
-    isPausedRef.current = true
-  }, [])
-
-  const handlePointerUp = useCallback(() => {
-    if (pointerInteracting.current !== null) {
-      phiOffsetRef.current += dragOffset.current.phi
-      thetaOffsetRef.current += dragOffset.current.theta
-      dragOffset.current = { phi: 0, theta: 0 }
-    }
-    pointerInteracting.current = null
-    if (canvasRef.current) canvasRef.current.style.cursor = "grab"
-    isPausedRef.current = false
-  }, [])
-
-  useEffect(() => {
-    const handlePointerMove = (e: PointerEvent) => {
-      if (pointerInteracting.current !== null) {
-        dragOffset.current = {
-          phi: (e.clientX - pointerInteracting.current.x) / 300,
-          theta: (e.clientY - pointerInteracting.current.y) / 1000,
-        }
-      }
-    }
-    window.addEventListener("pointermove", handlePointerMove, { passive: true })
-    window.addEventListener("pointerup", handlePointerUp, { passive: true })
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove)
-      window.removeEventListener("pointerup", handlePointerUp)
-    }
-  }, [handlePointerUp])
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -84,7 +45,7 @@ export function Globe({ className = "" }: { className?: string }) {
         phi: 0, theta: 0.2, 
         dark: 1, // Use dark mode to get white dots and glowing map
         diffuse: 1.2,
-        mapSamples: 16000, 
+        mapSamples: 8000, 
         mapBrightness: 6,
         baseColor: [1, 1, 1], // White dots
         markerColor: [1, 1, 1], // White markers
@@ -98,10 +59,10 @@ export function Globe({ className = "" }: { className?: string }) {
         opacity: 0.9,
       })
       function animate() {
-        if (!isPausedRef.current) phi += 0.003
+        phi += 0.003
         globe!.update({
-          phi: phi + phiOffsetRef.current + dragOffset.current.phi,
-          theta: 0.2 + thetaOffsetRef.current + dragOffset.current.theta,
+          phi: phi,
+          theta: 0.2,
         })
         animationId = requestAnimationFrame(animate)
       }
@@ -128,18 +89,17 @@ export function Globe({ className = "" }: { className?: string }) {
   }, [])
 
   return (
-    <div className={`relative aspect-square select-none flex items-center justify-center w-full h-full ${className}`}>
+    <div className={`relative aspect-square select-none flex items-center justify-center w-full h-full pointer-events-none ${className}`}>
       {/* Background circle to simulate the solid blue sphere. Screen mode turns black globe into transparent! */}
       <div className="absolute inset-0 m-auto w-[92%] h-[92%] rounded-full bg-[#4285F4]" />
       <canvas
         ref={canvasRef}
-        onPointerDown={handlePointerDown}
         style={{
           position: "relative",
           zIndex: 1,
           mixBlendMode: "screen", // Makes the black sphere transparent, showing the blue circle behind
-          width: "100%", height: "100%", cursor: "grab", opacity: 0,
-          transition: "opacity 1.2s ease", borderRadius: "50%", touchAction: "none",
+          width: "100%", height: "100%", opacity: 0,
+          transition: "opacity 1.2s ease", borderRadius: "50%",
         }}
       />
       {/* GDG Overlay Logo in bottom right */}
