@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Code2, Globe as GlobeIcon, Rocket, Users, Target, MessageSquare, X, Compass, Calendar, Award } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -36,6 +36,15 @@ export default function Home() {
   const [showEventsModal, setShowEventsModal] = useState(false);
   const [arcadeEnabled, setArcadeEnabled] = useState(false);
   const [eventsCatalog, setEventsCatalog] = useState([]);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(e => console.log('Autoplay prevented:', e));
+    }
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'huntConfig', 'global'), (snap) => {
@@ -168,32 +177,26 @@ export default function Home() {
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] md:w-[800px] h-[300px] md:h-[400px] opacity-50 rounded-[100%] -z-10" style={{ background: 'radial-gradient(ellipse, #e8f0fe 0%, #fce8e6 70%, rgba(255,255,255,0) 100%)' }} />
         
-        <div className="w-full md:max-w-7xl mx-auto text-center flex justify-center bg-[#e2dcd3] md:bg-transparent rounded-b-3xl md:rounded-none">
+        <div className="w-full md:max-w-7xl mx-auto text-center flex justify-center bg-transparent rounded-b-3xl md:rounded-none">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="w-full flex flex-col items-center"
           >
-            <div 
-              dangerouslySetInnerHTML={{
-                __html: `
-                  <video 
-                    src="/gdg_srmcem_banner_reveal.mp4"
-                    poster="/hero.png"
-                    autoplay 
-                    loop 
-                    muted 
-                    playsinline
-                    disablepictureinpicture
-                    disableremoteplayback
-                    preload="auto"
-                    class="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"
-                    style="background-color: #e2dcd3;"
-                  ></video>
-                `
-              }}
-              className="w-full"
+            <video 
+              ref={videoRef}
+              src="/home_banner.mp4"
+              poster="/hero.png"
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              disablePictureInPicture
+              disableRemotePlayback
+              preload="auto"
+              className="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"
+              style={{ backgroundColor: 'transparent' }}
             />
           </motion.div>
         </div>
@@ -209,11 +212,7 @@ export default function Home() {
             viewport={{ once: true, margin: "-100px" }}
             className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-6"
           >
-            <img 
-              src="/gdg_logo.png" 
-              alt="GDG Logo" 
-              className="w-32 md:w-48 h-auto object-contain"
-            />
+
             <div className="flex flex-col items-center text-center">
               <div className="bg-white rounded-full p-4 mb-4 border border-gray-100 shadow-sm w-40 h-40 flex items-center justify-center relative">
                 <Globe />

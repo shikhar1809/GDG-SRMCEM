@@ -60,15 +60,22 @@ export function Globe({ className = "" }: { className?: string }) {
         opacity: 0.9,
       })
       
-      function animate() {
-        phi += 0.015 // Increased speed again based on user feedback
+      let lastTime = 0
+      function animate(time: number) {
+        if (!lastTime) lastTime = time
+        const delta = time - lastTime
+        lastTime = time
+        
+        // Consistent speed regardless of refresh rate (120Hz vs 60Hz)
+        phi += delta * 0.0007 // Roughly matches previous speed at 60fps
+        
         globe!.update({
           phi: phi,
           theta: 0.2,
         })
         animationId = requestAnimationFrame(animate)
       }
-      animate()
+      animationId = requestAnimationFrame(animate)
       
       setTimeout(() => canvas && (canvas.style.opacity = "1"))
     }
