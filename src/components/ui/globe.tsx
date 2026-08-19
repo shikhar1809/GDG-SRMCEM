@@ -70,12 +70,12 @@ export function Globe({ className = "" }: { className?: string }) {
 
       // Connecting arcs like in the video
       const arcs = [
-        { startLat: 37.7595, startLng: -122.4367, endLat: 40.7128, endLng: -74.0060, color: [1, 1, 1] },
-        { startLat: 40.7128, startLng: -74.0060, endLat: 51.5074, endLng: -0.1278, color: [1, 1, 1] },
-        { startLat: 51.5074, startLng: -0.1278, endLat: 28.6139, endLng: 77.2090, color: [1, 1, 1] },
-        { startLat: 28.6139, startLng: 77.2090, endLat: 35.6895, endLng: 139.6917, color: [1, 1, 1] },
-        { startLat: 35.6895, startLng: 139.6917, endLat: -33.8688, endLng: 151.2093, color: [1, 1, 1] },
-        { startLat: 19.4326, startLng: -99.1332, endLat: -23.5505, endLng: -46.6333, color: [1, 1, 1] },
+        { from: [37.7595, -122.4367], to: [40.7128, -74.0060], color: [1, 1, 1] },
+        { from: [40.7128, -74.0060], to: [51.5074, -0.1278], color: [1, 1, 1] },
+        { from: [51.5074, -0.1278], to: [28.6139, 77.2090], color: [1, 1, 1] },
+        { from: [28.6139, 77.2090], to: [35.6895, 139.6917], color: [1, 1, 1] },
+        { from: [35.6895, 139.6917], to: [-33.8688, 151.2093], color: [1, 1, 1] },
+        { from: [19.4326, -99.1332], to: [-23.5505, -46.6333], color: [1, 1, 1] },
       ]
 
       globe = createGlobe(canvas, {
