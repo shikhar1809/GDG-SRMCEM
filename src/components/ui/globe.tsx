@@ -40,20 +40,21 @@ export function Globe({ className = "" }: { className?: string }) {
       ]
 
       globe = createGlobe(canvas, {
-        devicePixelRatio: 1, // Hardcode to 1 for mobile performance
-        width, height: width,
+        devicePixelRatio: 2, // Use 2 for sharpness, but control performance with mapSamples
+        width: width * 2,
+        height: width * 2,
         phi: 0, theta: 0.2, 
         dark: 0, 
         diffuse: 1.2,
-        mapSamples: 3000, // Reduced heavily to prevent mobile lag
+        mapSamples: 12000, // Restored to a decent amount since we removed the expensive CSS invert
         mapBrightness: 6,
-        baseColor: [1 - 0.258, 1 - 0.521, 1 - 0.956], // Inverted Google Blue
-        markerColor: [0, 0, 0], // Inverted White
-        glowColor: [1 - 0.258, 1 - 0.521, 1 - 0.956], // Inverted Google Blue glow
+        baseColor: [0.258, 0.521, 0.956], // Google Blue
+        markerColor: [1, 1, 1], // White
+        glowColor: [0.258, 0.521, 0.956], // Google Blue glow
         markerElevation: 0.05,
         markers,
         arcs,
-        arcColor: [0, 0, 0], // Inverted White
+        arcColor: [1, 1, 1], // White
         arcWidth: 1.5, 
         arcHeight: 0.4,
         opacity: 0.9,
@@ -62,7 +63,7 @@ export function Globe({ className = "" }: { className?: string }) {
       let isVisible = false
       const io = new IntersectionObserver((entries) => {
         isVisible = entries[0].isIntersecting
-      })
+      }, { rootMargin: '200px' })
       io.observe(canvas)
 
       function animate() {
@@ -105,7 +106,6 @@ export function Globe({ className = "" }: { className?: string }) {
         style={{
           position: "relative",
           zIndex: 1,
-          filter: "invert(1)", // Hardware-accelerated invert, much faster than mix-blend-mode on mobile Safari
           width: "100%", height: "100%", opacity: 0,
           transition: "opacity 1.2s ease", borderRadius: "50%",
         }}

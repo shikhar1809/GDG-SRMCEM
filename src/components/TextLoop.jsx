@@ -157,11 +157,26 @@ const TextLoop = ({
       root.addEventListener('pointerleave', resume);
     }
 
+    let observer = null;
+    if (root) {
+      observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          resume();
+        } else {
+          pause();
+        }
+      });
+      observer.observe(root);
+    }
+
     return () => {
       tween.kill();
       if (pauseOnHover && root) {
         root.removeEventListener('pointerenter', pause);
         root.removeEventListener('pointerleave', resume);
+      }
+      if (observer) {
+        observer.disconnect();
       }
     };
   }, [metrics, speed, direction, pauseOnHover]);
