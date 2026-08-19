@@ -40,21 +40,21 @@ export function Globe({ className = "" }: { className?: string }) {
       ]
 
       globe = createGlobe(canvas, {
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        devicePixelRatio: 1, // Hardcode to 1 to drastically improve mobile performance
         width, height: width,
         phi: 0, theta: 0.2, 
-        dark: 1, // Use dark mode to get white dots and glowing map
+        dark: 0, // Light mode so water is baseColor and dots are black
         diffuse: 1.2,
-        mapSamples: 8000, 
+        mapSamples: 4000, // Reduced heavily to prevent mobile lag
         mapBrightness: 6,
-        baseColor: [1, 1, 1], // White dots
-        markerColor: [1, 1, 1], // White markers
-        glowColor: [1, 1, 1],
+        baseColor: [1 - 0.258, 1 - 0.521, 1 - 0.956], // Inverted Google Blue
+        markerColor: [0, 0, 0], // Inverted White
+        glowColor: [1 - 0.258, 1 - 0.521, 1 - 0.956], // Inverted Google Blue glow
         markerElevation: 0.05,
         markers,
         arcs,
-        arcColor: [1, 1, 1],
-        arcWidth: 1.5, // Thicker arcs to match video
+        arcColor: [0, 0, 0], // Inverted White
+        arcWidth: 1.5, 
         arcHeight: 0.4,
         opacity: 0.9,
       })
@@ -90,14 +90,12 @@ export function Globe({ className = "" }: { className?: string }) {
 
   return (
     <div className={`relative aspect-square select-none flex items-center justify-center w-full h-full pointer-events-none ${className}`}>
-      {/* Background circle to simulate the solid blue sphere. Screen mode turns black globe into transparent! */}
-      <div className="absolute inset-0 m-auto w-[92%] h-[92%] rounded-full bg-[#4285F4]" />
       <canvas
         ref={canvasRef}
         style={{
           position: "relative",
           zIndex: 1,
-          mixBlendMode: "screen", // Makes the black sphere transparent, showing the blue circle behind
+          filter: "invert(1)", // Hardware-accelerated invert, much faster than mix-blend-mode on mobile Safari
           width: "100%", height: "100%", opacity: 0,
           transition: "opacity 1.2s ease", borderRadius: "50%",
         }}

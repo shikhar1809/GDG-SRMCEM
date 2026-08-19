@@ -159,6 +159,9 @@ export default function Home() {
         <style>{`
           video::-webkit-media-controls { display: none !important; }
           video::-webkit-media-controls-start-playback-button { display: none !important; }
+          video::-webkit-media-controls-overlay-play-button { display: none !important; }
+          video::-webkit-media-controls-panel { display: none !important; }
+          video::-webkit-media-controls-play-button { display: none !important; }
         `}</style>
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] md:w-[800px] h-[300px] md:h-[400px] bg-gradient-to-tr from-[#e8f0fe] via-white to-[#fce8e6] opacity-50 rounded-[100%] blur-3xl -z-10" />
