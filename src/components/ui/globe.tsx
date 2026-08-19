@@ -40,12 +40,12 @@ export function Globe({ className = "" }: { className?: string }) {
       ]
 
       globe = createGlobe(canvas, {
-        devicePixelRatio: 1, // Hardcode to 1 to drastically improve mobile performance
+        devicePixelRatio: 1, // Hardcode to 1 for mobile performance
         width, height: width,
-        phi: 4.5, theta: 0.2, // phi: 4.5 centers on India/Asia
-        dark: 0, // Light mode so water is baseColor and dots are black
+        phi: 0, theta: 0.2, 
+        dark: 0, 
         diffuse: 1.2,
-        mapSamples: 4000, // Reduced heavily to prevent mobile lag
+        mapSamples: 3000, // Reduced heavily to prevent mobile lag
         mapBrightness: 6,
         baseColor: [1 - 0.258, 1 - 0.521, 1 - 0.956], // Inverted Google Blue
         markerColor: [0, 0, 0], // Inverted White
@@ -58,6 +58,24 @@ export function Globe({ className = "" }: { className?: string }) {
         arcHeight: 0.4,
         opacity: 0.9,
       })
+      
+      let isVisible = false
+      const io = new IntersectionObserver((entries) => {
+        isVisible = entries[0].isIntersecting
+      })
+      io.observe(canvas)
+
+      function animate() {
+        if (isVisible) {
+          phi += 0.003
+          globe!.update({
+            phi: phi,
+            theta: 0.2,
+          })
+        }
+        animationId = requestAnimationFrame(animate)
+      }
+      animate()
       
       setTimeout(() => canvas && (canvas.style.opacity = "1"))
     }

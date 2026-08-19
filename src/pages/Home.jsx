@@ -182,6 +182,10 @@ export default function Home() {
               playsInline
               disablePictureInPicture
               disableRemotePlayback
+              preload="auto"
+              onCanPlay={(e) => {
+                e.target.play().catch(() => {});
+              }}
               className="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"
               style={{ backgroundColor: '#e2dcd3' }}
             />
