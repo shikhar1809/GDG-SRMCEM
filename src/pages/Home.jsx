@@ -74,6 +74,7 @@ export default function Home() {
             <motion.div 
               animate={{ rotate: 360 }}
               transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              style={{ willChange: 'transform' }}
               className="absolute inset-[-100%] bg-[conic-gradient(from_90deg_at_50%_50%,#AECBFA_0%,#F4B4AE_25%,#FDE293_50%,#A8DAB5_75%,#AECBFA_100%)] opacity-60"
             />
             {/* Inner button */}
@@ -81,6 +82,7 @@ export default function Home() {
               <motion.div 
                 animate={{ rotate: 360 }}
                 transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                style={{ willChange: 'transform' }}
                 className="text-[#4285F4]"
               >
                 <Compass size={18} className="md:w-5 md:h-5" />
@@ -164,7 +166,7 @@ export default function Home() {
           video::-webkit-media-controls-play-button { display: none !important; }
         `}</style>
         {/* Subtle Background Gradients */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] md:w-[800px] h-[300px] md:h-[400px] bg-gradient-to-tr from-[#e8f0fe] via-white to-[#fce8e6] opacity-50 rounded-[100%] blur-3xl -z-10" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] md:w-[800px] h-[300px] md:h-[400px] opacity-50 rounded-[100%] -z-10" style={{ background: 'radial-gradient(ellipse, #e8f0fe 0%, #fce8e6 70%, rgba(255,255,255,0) 100%)' }} />
         
         <div className="w-full md:max-w-7xl mx-auto text-center flex justify-center bg-[#e2dcd3] md:bg-transparent rounded-b-3xl md:rounded-none">
           <motion.div
@@ -272,7 +274,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }}
               className="md:col-span-2 bg-white rounded-[2rem] p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow"
             >
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#e8f0fe] rounded-full filter blur-3xl opacity-50 group-hover:scale-110 transition duration-700 -z-10" />
+              <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-50 group-hover:scale-110 transition duration-700 -z-10" style={{ background: 'radial-gradient(circle, #e8f0fe 0%, rgba(232,240,254,0) 70%)' }} />
               <Code2 className="text-[#4285F4] mb-6" size={40} />
               <h3 className="text-2xl font-bold text-gray-900 mb-3">Workshops & Codelabs</h3>
               <p className="text-gray-500 max-w-md leading-relaxed">Get hands-on experience with Android, Web, Cloud, and Machine Learning through guided, practical sessions led by experts.</p>
@@ -283,7 +285,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ delay: 0.1 }}
               className="bg-white rounded-[2rem] p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow"
             >
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-[#fce8e6] rounded-full filter blur-3xl opacity-50 group-hover:scale-110 transition duration-700 -z-10" />
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 rounded-full opacity-50 group-hover:scale-110 transition duration-700 -z-10" style={{ background: 'radial-gradient(circle, #fce8e6 0%, rgba(252,232,230,0) 70%)' }} />
               <GlobeIcon className="text-[#EA4335] mb-4 md:mb-6" size={32} />
               <h3 className="text-xl font-bold text-gray-900 mb-2 md:mb-3">Global Network</h3>
               <p className="text-gray-500 text-sm md:text-base leading-relaxed">Connect with millions of developers across the globe.</p>
@@ -294,7 +296,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ delay: 0.2 }}
               className="bg-white rounded-[2rem] p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow"
             >
-              <div className="absolute top-0 left-0 w-32 h-32 bg-[#fef7e0] rounded-full filter blur-3xl opacity-50 group-hover:scale-110 transition duration-700 -z-10" />
+              <div className="absolute top-0 left-0 w-32 h-32 rounded-full opacity-50 group-hover:scale-110 transition duration-700 -z-10" style={{ background: 'radial-gradient(circle, #fef7e0 0%, rgba(254,247,224,0) 70%)' }} />
               <Target className="text-[#FBBC04] mb-4 md:mb-6" size={32} />
               <h3 className="text-xl font-bold text-gray-900 mb-2 md:mb-3">Mentorship</h3>
               <p className="text-gray-500 text-sm md:text-base leading-relaxed">Get guidance from experienced seniors and industry professionals.</p>
@@ -305,7 +307,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ delay: 0.3 }}
               className="md:col-span-2 bg-[#34A853] text-white rounded-[2rem] p-6 md:p-8 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow"
             >
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-white rounded-full filter blur-3xl opacity-10 group-hover:scale-110 transition duration-700 z-0" />
+              <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full opacity-10 group-hover:scale-110 transition duration-700 z-0" style={{ background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 70%)' }} />
               <div className="relative z-10">
                 <Rocket className="text-white mb-6" size={40} />
                 <h3 className="text-2xl font-bold mb-3">Hackathons & Projects</h3>

@@ -60,20 +60,12 @@ export function Globe({ className = "" }: { className?: string }) {
         opacity: 0.9,
       })
       
-      let isVisible = false
-      const io = new IntersectionObserver((entries) => {
-        isVisible = entries[0].isIntersecting
-      }, { rootMargin: '200px' })
-      io.observe(canvas)
-
       function animate() {
-        if (isVisible) {
-          phi += 0.003
-          globe!.update({
-            phi: phi,
-            theta: 0.2,
-          })
-        }
+        phi += 0.003
+        globe!.update({
+          phi: phi,
+          theta: 0.2,
+        })
         animationId = requestAnimationFrame(animate)
       }
       animate()
