@@ -181,7 +181,7 @@ export default function Home() {
               muted 
               playsInline
               disablePictureInPicture
-              preload="auto"
+              disableRemotePlayback
               className="w-full h-[40vh] sm:h-[50vh] md:h-auto max-h-[70vh] md:max-h-[80vh] object-contain md:rounded-3xl shadow-sm pointer-events-none"
               style={{ backgroundColor: '#e2dcd3' }}
             />

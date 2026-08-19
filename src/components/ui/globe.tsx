@@ -42,7 +42,7 @@ export function Globe({ className = "" }: { className?: string }) {
       globe = createGlobe(canvas, {
         devicePixelRatio: 1, // Hardcode to 1 to drastically improve mobile performance
         width, height: width,
-        phi: 0, theta: 0.2, 
+        phi: 4.5, theta: 0.2, // phi: 4.5 centers on India/Asia
         dark: 0, // Light mode so water is baseColor and dots are black
         diffuse: 1.2,
         mapSamples: 4000, // Reduced heavily to prevent mobile lag
@@ -58,15 +58,7 @@ export function Globe({ className = "" }: { className?: string }) {
         arcHeight: 0.4,
         opacity: 0.9,
       })
-      function animate() {
-        phi += 0.003
-        globe!.update({
-          phi: phi,
-          theta: 0.2,
-        })
-        animationId = requestAnimationFrame(animate)
-      }
-      animate()
+      
       setTimeout(() => canvas && (canvas.style.opacity = "1"))
     }
 
